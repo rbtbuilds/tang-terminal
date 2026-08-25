@@ -481,6 +481,23 @@ table.quote-table .quote-action:hover td::first-letter { color: var(--accent); }
 .detail-content { overflow-y: auto; padding: 14px 16px 30px; }
 .detail-summary { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 10px; }
 .detail-price { color: var(--fg); font-size: 28px; font-weight: bold; letter-spacing: -1px; }
+.watchlist-toggle {
+  margin-left: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-inset);
+  color: var(--fg-dim);
+  border-radius: 2px;
+  font: inherit;
+  font-size: var(--fs-xs);
+  padding: 5px 8px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.watchlist-toggle:hover, .watchlist-toggle.active { color: var(--amber); border-color: #6b5410; }
+.watch-empty { color: var(--fg-faint); text-align: center; line-height: 1.6; padding: 28px 10px; }
+.watch-empty strong { color: var(--fg-dim); }
+.watch-remove { border: 0; background: transparent; color: var(--fg-faint); cursor: pointer; font: inherit; font-size: 16px; line-height: 1; }
+.watch-remove:hover { color: var(--red); }
 .detail-provenance { text-align: right; color: var(--fg-dim); font-size: var(--fs-xs); line-height: 1.5; }
 .detail-provenance span { color: var(--amber); }
 .range-bar { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }

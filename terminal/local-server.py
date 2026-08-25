@@ -137,7 +137,7 @@ def fetch_news(symbol: str) -> list[dict]:
 
 
 class Handler(SimpleHTTPRequestHandler):
-    server_version = "TangTerminal/1.1"
+    server_version = "TangTerminal/1.2"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)

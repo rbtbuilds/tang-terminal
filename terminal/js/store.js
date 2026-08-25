@@ -10,6 +10,7 @@
   var PREFIX = "tang-terminal:";
   var LAYOUT_KEY = PREFIX + "layout.v1";
   var SETTINGS_KEY = PREFIX + "settings.v1";
+  var WATCHLIST_KEY = PREFIX + "watchlist.v1";
 
   /** Default widget layout: order + size for every known widget id. */
   var DEFAULT_LAYOUT = [
@@ -17,6 +18,7 @@
     { id: "indices",   size: "md" },
     { id: "heatmap",   size: "md" },
     { id: "stocks",    size: "md" },
+    { id: "watchlist", size: "sm" },
     { id: "metals",    size: "sm" },
     { id: "assistant", size: "lg" }
   ];
@@ -93,6 +95,17 @@
 
     saveSettings: function (settings) {
       writeJSON(SETTINGS_KEY, settings);
+    },
+
+    getWatchlist: function () {
+      var saved = readJSON(WATCHLIST_KEY, []);
+      return Array.isArray(saved) ? saved.filter(function (symbol, index, list) {
+        return typeof symbol === "string" && list.indexOf(symbol) === index;
+      }) : [];
+    },
+
+    saveWatchlist: function (symbols) {
+      return writeJSON(WATCHLIST_KEY, symbols);
     }
   };
 })(window.TT = window.TT || {});

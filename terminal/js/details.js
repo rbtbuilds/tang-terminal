@@ -106,7 +106,7 @@
     }).join("") : '<div class="detail-empty">No recent headlines returned for this instrument.</div>';
     title.textContent = instrument.sym + " · " + instrument.name;
     content.innerHTML =
-      '<div class="detail-summary"><div><span class="detail-price">' + price(technical.last, digits) + '</span> <span class="' + (change == null ? "faint" : TT.widgets.valueClass(change)) + '">' + (change == null ? "" : (change >= 0 ? "+" : "") + change.toFixed(2) + "%") + '</span></div>' +
+      '<div class="detail-summary"><div><span class="detail-price">' + price(technical.last, digits) + '</span> <span class="' + (change == null ? "faint" : TT.widgets.valueClass(change)) + '">' + (change == null ? "" : (change >= 0 ? "+" : "") + change.toFixed(2) + "%") + '</span><button id="watchlist-toggle" class="watchlist-toggle ' + (TT.watchlist.contains(currentSymbol) ? "active" : "") + '">' + (TT.watchlist.contains(currentSymbol) ? "★ WATCHING" : "+ WATCHLIST") + '</button></div>' +
       '<div class="detail-provenance">' + escapeHTML(payload.provider || "LOCAL") + ' · ' + escapeHTML(payload.exchange || "") + ' · AS OF ' + escapeHTML(formatTime(payload.marketTime)) + '<br><span>Quotes may be delayed by the exchange. Verify before trading.</span></div></div>' +
       '<div class="range-bar" aria-label="Chart range">' + rangeButtons + '</div>' +
       '<section class="chart-card"><canvas id="price-chart" aria-label="' + escapeHTML(instrument.name) + ' price chart"></canvas><div class="chart-legend"><span>— PRICE</span><span class="amber">— SMA20</span><span>' + payload.points.length + ' BARS · ' + escapeHTML(payload.interval.toUpperCase()) + '</span></div></section>' +
@@ -123,6 +123,9 @@
       '<section class="research-card news-card"><h3>RECENT NEWS</h3><div class="news-list">' + news + '</div><p class="source-note">Headlines via Yahoo Finance search; links open at the publisher. Inclusion is not endorsement.</p></section>';
     content.querySelectorAll(".range-btn").forEach(function (button) {
       button.addEventListener("click", function () { currentRange = button.dataset.range; load(); });
+    });
+    content.querySelector("#watchlist-toggle").addEventListener("click", function (event) {
+      var watching = TT.watchlist.toggle(currentSymbol); event.target.classList.toggle("active", watching); event.target.textContent = watching ? "★ WATCHING" : "+ WATCHLIST";
     });
     window.requestAnimationFrame(function () { drawChart(payload.points); });
   }

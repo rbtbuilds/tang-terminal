@@ -11,6 +11,7 @@ TANG Terminal is a compact, terminal-style global market canvas. It runs with no
 - Demo and live data adapters, plus a scrolling market tape
 - Local AI assistant backed by an Ollama model of your choice
 - Click-through instrument research with seven chart ranges, calculated technicals, educational bull/bear scenarios, and recent headlines
+- Persistent watchlist panel; pin or unpin an instrument from its research drawer
 - Responsive full-screen canvas with keyboard-friendly controls
 
 ## Quick start
@@ -59,6 +60,7 @@ The assistant receives the current visible quote snapshot with each prompt. It i
 - Select **RESET LAYOUT** to restore the factory arrangement.
 - Select **DATA: DEMO/LIVE** to switch adapters. Live mode requires the local launcher and internet access.
 - Select **FULLSCREEN** to enter a borderless browser canvas. Move the browser window to the desired display first, then enter fullscreen. Browser security requires this user gesture.
+- Open an instrument and select **+ WATCHLIST** to pin it to the persistent watchlist panel. Select **★ WATCHING** or the row's × button to remove it.
 
 Layout and preferences are stored only in the browser's `localStorage`. Different browser profiles and `file://` versus `http://` keep separate layouts.
 
@@ -87,6 +89,8 @@ terminal/
 ```
 
 The browser code deliberately uses classic scripts and ES5-compatible syntax so `index.html` works from `file://` without module/CORS errors. There are no runtime dependencies to install and no remote UI assets.
+
+The product benchmark and phased roadmap are documented in [docs/BLOOMBERG-BENCHMARK.md](docs/BLOOMBERG-BENCHMARK.md).
 
 ## Reliability and privacy
 
