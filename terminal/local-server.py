@@ -8,6 +8,7 @@ import mimetypes
 import os
 import pathlib
 import time
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -20,6 +21,8 @@ RANGE_INTERVALS = {
     "1d": "5m", "5d": "15m", "1mo": "1h", "3mo": "1d",
     "6mo": "1d", "1y": "1d", "5y": "1wk",
 }
+QUOTE_CACHE: dict[str, tuple[float, dict[str, dict]]] = {}
+QUOTE_CACHE_LOCK = threading.Lock()
 
 
 YAHOO_SYMBOLS = {
@@ -64,6 +67,62 @@ def fetch_quote(symbol: str) -> tuple[str, dict | None]:
         }
     except (KeyError, TypeError, ValueError, OSError, json.JSONDecodeError, urllib.error.URLError):
         return symbol, None
+
+
+def fetch_quotes(symbols: list[str]) -> dict[str, dict]:
+    """Fetch a batch of quotes in one upstream request for fast dashboard loads."""
+    if not symbols:
+        return {}
+    provider_map = {yahoo_symbol(symbol): symbol for symbol in symbols}
+    joined = ",".join(urllib.parse.quote(symbol, safe="") for symbol in provider_map)
+    url = f"https://query1.finance.yahoo.com/v7/finance/spark?symbols={joined}&range=1d&interval=1m"
+    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 TANG-Terminal/1.0"})
+    with urllib.request.urlopen(request, timeout=15) as response:
+        payload = json.loads(response.read().decode("utf-8", "replace"))
+    quotes = {}
+    for result in payload.get("spark", {}).get("result") or []:
+        provider_symbol = result.get("symbol") or ""
+        original = provider_map.get(provider_symbol)
+        responses = result.get("response") or []
+        if not original or not responses:
+            continue
+        meta = responses[0].get("meta") or {}
+        price = float(meta.get("regularMarketPrice") or 0)
+        previous = float(meta.get("previousClose") or meta.get("chartPreviousClose") or 0)
+        if price <= 0 or previous <= 0:
+            continue
+        quotes[original] = {
+            "price": price,
+            "change": ((price - previous) / previous) * 100,
+            "timestamp": int(meta.get("regularMarketTime") or 0),
+            "exchange": meta.get("exchangeName") or "",
+        }
+    return quotes
+
+
+def search_symbols(query: str) -> list[dict]:
+    """Search Yahoo's security directory and normalize selectable instruments."""
+    encoded = urllib.parse.quote(query, safe="")
+    url = (
+        "https://query1.finance.yahoo.com/v1/finance/search"
+        f"?q={encoded}&quotesCount=12&newsCount=0&enableFuzzyQuery=true"
+    )
+    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 TANG-Terminal/1.0"})
+    with urllib.request.urlopen(request, timeout=10) as response:
+        payload = json.loads(response.read().decode("utf-8", "replace"))
+    allowed = {"EQUITY", "ETF", "INDEX", "MUTUALFUND", "FUTURE", "CURRENCY", "CRYPTOCURRENCY"}
+    results = []
+    for item in payload.get("quotes") or []:
+        symbol = item.get("symbol")
+        quote_type = item.get("quoteType") or item.get("typeDisp") or ""
+        if symbol and quote_type.upper() in allowed:
+            results.append({
+                "symbol": symbol,
+                "name": item.get("longname") or item.get("shortname") or symbol,
+                "exchange": item.get("exchDisp") or item.get("exchange") or "",
+                "type": item.get("typeDisp") or quote_type,
+            })
+    return results
 
 
 def fetch_chart(symbol: str, chart_range: str) -> dict:
@@ -137,7 +196,7 @@ def fetch_news(symbol: str) -> list[dict]:
 
 
 class Handler(SimpleHTTPRequestHandler):
-    server_version = "TangTerminal/1.2"
+    server_version = "TangTerminal/2.0"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
@@ -157,14 +216,38 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802 - http.server API
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == "/api/quotes":
-            symbols = [s for s in urllib.parse.parse_qs(parsed.query).get("symbols", [""])[0].split(",") if s][:60]
-            with ThreadPoolExecutor(max_workers=10) as pool:
-                pairs = list(pool.map(fetch_quote, symbols))
+            symbols = [s for s in urllib.parse.parse_qs(parsed.query).get("symbols", [""])[0].split(",") if s][:120]
+            cache_key = ",".join(symbols)
+            with QUOTE_CACHE_LOCK:
+                cached = QUOTE_CACHE.get(cache_key)
+            if cached and time.time() - cached[0] < 20:
+                quotes = cached[1]
+            else:
+                quotes = {}
+                for index in range(0, len(symbols), 30):
+                    try:
+                        quotes.update(fetch_quotes(symbols[index:index + 30]))
+                    except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError):
+                        with ThreadPoolExecutor(max_workers=10) as pool:
+                            pairs = list(pool.map(fetch_quote, symbols[index:index + 30]))
+                        quotes.update({symbol: quote for symbol, quote in pairs if quote})
+                with QUOTE_CACHE_LOCK:
+                    QUOTE_CACHE[cache_key] = (time.time(), quotes)
             self.send_json({
-                "quotes": {symbol: quote for symbol, quote in pairs if quote},
+                "quotes": quotes,
                 "provider": "Yahoo Finance",
                 "retrievedAt": int(time.time()),
             })
+            return
+        if parsed.path == "/api/search":
+            query = (urllib.parse.parse_qs(parsed.query).get("q") or [""])[0].strip()[:80]
+            if len(query) < 1:
+                self.send_json({"results": []})
+                return
+            try:
+                self.send_json({"results": search_symbols(query), "provider": "Yahoo Finance"})
+            except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError) as error:
+                self.send_json({"error": "Symbol search unavailable", "detail": str(error)}, 503)
             return
         if parsed.path == "/api/instrument":
             params = urllib.parse.parse_qs(parsed.query)

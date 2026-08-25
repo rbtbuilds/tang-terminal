@@ -16,7 +16,7 @@
   <header id="titlebar" class="titlebar">
     <div class="titlebar-left">
       <span class="logo">▮▮ TANG TERMINAL</span>
-      <span class="version" id="app-version">v1.2.0</span>
+      <span class="version" id="app-version">v2.0.0</span>
     </div>
 
     <div class="titlebar-center">
@@ -32,6 +32,17 @@
       <span class="utc-clock" id="utc-clock" title="Coordinated Universal Time">--:--:-- UTC</span>
     </div>
   </header>
+
+  <nav class="workspacebar" aria-label="Terminal workspaces">
+    <div id="workspace-tabs" class="workspace-tabs"></div>
+    <div class="workspace-tools">
+      <button class="tb-btn primary" id="btn-add-symbol">+ TICKER</button>
+      <button class="tb-btn" id="btn-add-widget">+ WIDGET</button>
+      <button class="tb-btn font-btn" id="btn-font-down" aria-label="Decrease font size">A−</button>
+      <span id="font-scale" class="font-scale">100%</span>
+      <button class="tb-btn font-btn" id="btn-font-up" aria-label="Increase font size">A+</button>
+    </div>
+  </nav>
 
   <!-- ======================= Widget canvas ======================= -->
   <main id="canvas" class="canvas" aria-label="Market dashboard canvas">
@@ -57,10 +68,27 @@
     </section>
   </div>
 
+  <div id="symbol-overlay" class="modal-overlay" hidden>
+    <section class="terminal-modal" role="dialog" aria-modal="true" aria-labelledby="symbol-title">
+      <header><div><span class="detail-kicker">GLOBAL SECURITY SEARCH</span><h2 id="symbol-title">ADD ANY TICKER</h2></div><button class="detail-close modal-close">ESC ×</button></header>
+      <form id="symbol-search-form" class="symbol-search"><input id="symbol-search-input" autocomplete="off" placeholder="Company, ticker or instrument — e.g. BP.L, Shell, AAPL"><button type="submit">SEARCH ↵</button></form>
+      <p class="modal-hint">Search equities, ETFs, indices, futures, FX and crypto across supported exchanges. Verify exchange and currency before adding. Custom quotes require LIVE mode.</p>
+      <div id="symbol-results" class="symbol-results"></div>
+    </section>
+  </div>
+
+  <div id="widget-overlay" class="modal-overlay" hidden>
+    <section class="terminal-modal widget-modal" role="dialog" aria-modal="true" aria-labelledby="widget-title">
+      <header><div><span class="detail-kicker">WORKSPACE COMPONENTS</span><h2 id="widget-title">ADD WIDGET</h2></div><button class="detail-close modal-close">ESC ×</button></header>
+      <div id="widget-results" class="widget-results"></div>
+    </section>
+  </div>
+
   <!-- Classic scripts (no ES modules) so the app runs from file:// with zero build step. -->
   <script src="js/store.js"></script>
-  <script src="js/watchlist.js"></script>
   <script src="js/data/universe.js"></script>
+  <script src="js/symbols.js"></script>
+  <script src="js/watchlist.js"></script>
   <script src="js/data/adapter.js"></script>
   <script src="js/grid.js"></script>
   <script src="js/widgets/base.js"></script>
@@ -70,6 +98,7 @@
   <script src="js/widgets/stocks.js"></script>
   <script src="js/widgets/watchlist.js"></script>
   <script src="js/widgets/metals.js"></script>
+  <script src="js/widgets/markets.js"></script>
   <script src="js/ollama.js"></script>
   <script src="js/widgets/assistant.js"></script>
   <script src="js/details.js"></script>

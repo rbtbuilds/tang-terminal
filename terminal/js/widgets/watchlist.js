@@ -12,7 +12,7 @@
         }
         body.innerHTML = '<table class="quote-table watch-table"><thead><tr><th>SYMBOL</th><th class="num">LAST</th><th class="num">DAY</th><th></th></tr></thead><tbody>' + symbols.map(function (symbol) {
           var item = TT.universe.index[symbol]; var quote = latestQuotes[symbol];
-          return '<tr class="quote-action" data-symbol="' + symbol + '" tabindex="0" role="button"><td><strong>' + symbol + '</strong> <span class="faint">' + item.name + '</span></td><td class="num">' + (quote ? TT.widgets.format(quote.price, item.digits || 2) : '—') + '</td><td class="num ' + (quote ? TT.widgets.valueClass(quote.change) : 'faint') + '">' + (quote ? (quote.change >= 0 ? '+' : '') + quote.change.toFixed(2) + '%' : '—') + '</td><td><button class="watch-remove" data-watch-remove="' + symbol + '" aria-label="Remove ' + symbol + ' from watchlist">×</button></td></tr>';
+          return '<tr class="quote-action" data-symbol="' + TT.widgets.escapeHTML(symbol) + '" tabindex="0" role="button"><td><strong>' + TT.widgets.escapeHTML(symbol) + '</strong> <span class="faint">' + TT.widgets.escapeHTML(item.name) + '</span></td><td class="num">' + (quote ? TT.widgets.format(quote.price, item.digits || 2) : '—') + '</td><td class="num ' + (quote ? TT.widgets.valueClass(quote.change) : 'faint') + '">' + (quote ? (quote.change >= 0 ? '+' : '') + quote.change.toFixed(2) + '%' : '—') + '</td><td><button class="watch-remove" data-watch-remove="' + TT.widgets.escapeHTML(symbol) + '" aria-label="Remove ' + TT.widgets.escapeHTML(symbol) + ' from watchlist">×</button></td></tr>';
         }).join("") + '</tbody></table>';
       }
       body.addEventListener("click", function (event) {

@@ -1,37 +1,141 @@
 (function (TT) {
   "use strict";
+
   var panels = {}; var quotes = {}; var adapter = null; var settings = TT.store.getSettings();
-  var canvas = document.getElementById("canvas"); var feedPill = document.getElementById("feed-status-pill"); var modePill = document.getElementById("data-mode-pill"); var aiPill = document.getElementById("ollama-pill");
+  var canvas = document.getElementById("canvas");
+  var feedPill = document.getElementById("feed-status-pill");
+  var modePill = document.getElementById("data-mode-pill");
+  var aiPill = document.getElementById("ollama-pill");
+  var symbolOverlay = document.getElementById("symbol-overlay");
+  var widgetOverlay = document.getElementById("widget-overlay");
+  var widgetCatalog = [
+    { id: "clocks", title: "World Session Clocks", description: "Eight global trading sessions", size: "lg" },
+    { id: "indices", title: "Global Indices", description: "Major US, European and Asian benchmarks", size: "md" },
+    { id: "heatmap", title: "Sector Pulse", description: "AI, energy and financial heatmap", size: "md" },
+    { id: "stocks", title: "Mega-cap Stocks", description: "Largest global US-listed equities", size: "md" },
+    { id: "watchlist", title: "Watchlist", description: "Your persistent custom instrument list", size: "md" },
+    { id: "metals", title: "Precious Metals", description: "Gold, silver, copper, platinum and palladium", size: "sm" },
+    { id: "energy", title: "Energy Complex", description: "WTI, Brent, gas and refined products", size: "md" },
+    { id: "commodities", title: "Commodity Matrix", description: "Energy, metals, agriculture and livestock", size: "md" },
+    { id: "tankers", title: "Tanker Equities", description: "Crude and product tanker operators", size: "md" },
+    { id: "macro", title: "Cross-asset Signals", description: "Volatility, USD, yields, FX and crypto", size: "md" },
+    { id: "assistant", title: "Local AI Assistant", description: "Ollama-powered market research", size: "lg" }
+  ];
+
   function setPill(node, state, text) { node.className = "status-pill " + state; node.textContent = text; }
   function renderWidget(id) { var widget = TT.widgets[id]; if (!widget) return null; panels[id] = widget.create(); return panels[id]; }
+
   function renderTicker() {
-    document.getElementById("ticker-track").innerHTML = TT.universe.indices.concat(TT.universe.metals).map(function (item) {
-      var q = quotes[item.sym]; return '<button class="ticker-item quote-action" data-symbol="' + item.sym + '"><span class="t-sym">' + item.sym + '</span> ' + (q ? TT.widgets.format(q.price, item.digits) + ' <span class="' + TT.widgets.valueClass(q.change) + '">' + (q.change >= 0 ? '▲' : '▼') + ' ' + Math.abs(q.change).toFixed(2) + '%</span>' : '—') + '</button>';
+    document.getElementById("ticker-track").innerHTML = TT.universe.indices.concat(TT.universe.energy.slice(0, 3), TT.universe.metals.slice(0, 2)).map(function (item) {
+      var quote = quotes[item.sym];
+      return '<button class="ticker-item quote-action" data-symbol="' + item.sym + '"><span class="t-sym">' + item.sym + '</span> ' + (quote ? TT.widgets.format(quote.price, item.digits) + ' <span class="' + TT.widgets.valueClass(quote.change) + '">' + (quote.change >= 0 ? '▲' : '▼') + ' ' + Math.abs(quote.change).toFixed(2) + '%</span>' : '—') + '</button>';
     }).join("");
   }
-  function renderQuotes() { ["indices", "heatmap", "stocks", "watchlist", "metals"].forEach(function (id) { if (panels[id] && panels[id].update) panels[id].update(quotes); }); renderTicker(); }
+
+  function renderQuotes() {
+    Object.keys(panels).forEach(function (id) { if (panels[id] && panels[id].update) panels[id].update(quotes); });
+    renderTicker();
+  }
+
   function onData(next) { Object.keys(next).forEach(function (key) { quotes[key] = next[key]; }); renderQuotes(); }
   function onStatus(state, text) { setPill(feedPill, state, "FEED: " + text); }
-  function startAdapter() { if (adapter) adapter.stop(); quotes = {}; renderQuotes(); adapter = TT.data.create(settings.dataMode, onData, onStatus); setPill(modePill, settings.dataMode === "live" ? "ok" : "warn", "MODE: " + settings.dataMode.toUpperCase()); document.getElementById("btn-toggle-mode").textContent = "DATA: " + settings.dataMode.toUpperCase(); adapter.start(); }
+
+  function startAdapter() {
+    if (adapter) adapter.stop(); quotes = {}; renderQuotes();
+    adapter = TT.data.create(settings.dataMode, onData, onStatus);
+    setPill(modePill, settings.dataMode === "live" ? "ok" : "warn", "MODE: " + settings.dataMode.toUpperCase());
+    document.getElementById("btn-toggle-mode").textContent = "DATA: " + settings.dataMode.toUpperCase();
+    adapter.start();
+  }
+
+  function disposePanels() {
+    Object.keys(panels).forEach(function (id) {
+      if (panels[id]._timer) window.clearInterval(panels[id]._timer);
+      if (panels[id]._unsubscribe) panels[id]._unsubscribe();
+    });
+  }
+
+  function renderWorkspaceTabs() {
+    var active = TT.store.getActiveWorkspace(); var tabs = document.getElementById("workspace-tabs"); tabs.innerHTML = "";
+    TT.store.getWorkspaces().forEach(function (workspace) {
+      var button = document.createElement("button"); button.className = "workspace-tab" + (workspace.id === active ? " active" : ""); button.textContent = workspace.label; button.addEventListener("click", function () { if (workspace.id !== TT.store.getActiveWorkspace()) { TT.store.setActiveWorkspace(workspace.id); mountWorkspace(); } }); tabs.appendChild(button);
+    });
+  }
+
+  function mountWorkspace() {
+    disposePanels(); panels = {}; TT.grid.mount(canvas, TT.store.getLayout(), renderWidget); renderQuotes(); renderWorkspaceTabs();
+  }
+
+  function applyFontScale(next) {
+    settings.fontScale = Math.max(0.85, Math.min(1.45, Math.round(next * 20) / 20));
+    document.documentElement.style.setProperty("--font-scale", settings.fontScale);
+    document.getElementById("font-scale").textContent = Math.round(settings.fontScale * 100) + "%";
+    TT.store.saveSettings(settings);
+  }
+
+  function closeModal(overlay) { overlay.hidden = true; }
+  function openSymbolSearch() {
+    symbolOverlay.hidden = false; document.getElementById("symbol-results").innerHTML = "";
+    window.setTimeout(function () { document.getElementById("symbol-search-input").focus(); }, 0);
+  }
+
+  function renderSymbolResults(results) {
+    var container = document.getElementById("symbol-results"); container.innerHTML = "";
+    if (!results.length) { container.innerHTML = '<div class="detail-empty">No matching instruments found. Try the exchange suffix, such as BP.L for London.</div>'; return; }
+    results.forEach(function (result) {
+      var row = document.createElement("div"); row.className = "symbol-result";
+      var info = document.createElement("div"); var symbol = document.createElement("strong"); var name = document.createElement("span"); var meta = document.createElement("small");
+      symbol.textContent = result.symbol; name.textContent = result.name; meta.textContent = (result.exchange || "UNKNOWN EXCHANGE") + " · " + (result.type || "SECURITY");
+      info.appendChild(symbol); info.appendChild(name); info.appendChild(meta);
+      var button = document.createElement("button"); button.textContent = TT.watchlist.contains(result.symbol.toUpperCase()) ? "★ WATCHING" : "+ WATCHLIST";
+      button.addEventListener("click", function () {
+        var instrument = TT.symbols.register(result); TT.watchlist.add(instrument.sym);
+        if (!TT.store.getLayout().some(function (entry) { return entry.id === "watchlist"; })) TT.store.addWidget("watchlist", "md");
+        button.textContent = "★ WATCHING"; mountWorkspace(); startAdapter();
+      });
+      row.appendChild(info); row.appendChild(button); container.appendChild(row);
+    });
+  }
+
+  function renderWidgetPicker() {
+    var container = document.getElementById("widget-results"); var layout = TT.store.getLayout(); container.innerHTML = "";
+    widgetCatalog.forEach(function (widget) {
+      var present = layout.some(function (entry) { return entry.id === widget.id; }); var card = document.createElement("div"); card.className = "widget-option";
+      var copy = document.createElement("div"); var heading = document.createElement("strong"); var description = document.createElement("span"); heading.textContent = widget.title; description.textContent = widget.description; copy.appendChild(heading); copy.appendChild(description);
+      var button = document.createElement("button"); button.textContent = present ? "ADDED" : "+ ADD"; button.disabled = present;
+      button.addEventListener("click", function () { TT.store.addWidget(widget.id, widget.size); mountWorkspace(); renderWidgetPicker(); });
+      card.appendChild(copy); card.appendChild(button); container.appendChild(card);
+    });
+  }
+
   TT.app = {
     setAIStatus: function (state, text) { setPill(aiPill, state, "AI: " + text); },
+    removeWidget: function (id) { TT.store.removeWidget(id); mountWorkspace(); },
+    refreshData: startAdapter,
     marketSnapshot: function () {
-      var timestamps = Object.keys(quotes).map(function (sym) { return quotes[sym].timestamp || 0; });
-      var latest = Math.max.apply(Math, timestamps.concat([0]));
-      return "Mode: " + settings.dataMode.toUpperCase() + "\n" +
-        "Provider: " + (settings.dataMode === "live" ? "Yahoo Finance; exchange-dependent real-time/delayed quotes" : "local simulation; not market data") + "\n" +
-        "Snapshot time: " + (latest ? new Date(latest * 1000).toISOString() : new Date().toISOString()) + "\n" +
-        "Coverage limits: No bond yields, FX, volatility indices, fund flows, or news are included here. Live metals are futures proxies.\n" +
-        Object.keys(quotes).map(function (sym) { var q = quotes[sym]; var instrument = TT.universe.index[sym] || { name: sym }; return sym + " (" + instrument.name + ") " + q.price.toFixed(q.digits) + " " + (q.change >= 0 ? "+" : "") + q.change.toFixed(2) + "%"; }).join("\n");
+      var timestamps = Object.keys(quotes).map(function (symbol) { return quotes[symbol].timestamp || 0; }); var latest = Math.max.apply(Math, timestamps.concat([0]));
+      return "Mode: " + settings.dataMode.toUpperCase() + "\nProvider: " + (settings.dataMode === "live" ? "Yahoo Finance; exchange-dependent real-time/delayed quotes" : "local simulation; not market data") + "\nSnapshot time: " + (latest ? new Date(latest * 1000).toISOString() : new Date().toISOString()) + "\nCoverage limits: No fund flows or live freight rates. Commodity values are front-month futures proxies.\n" + Object.keys(quotes).map(function (symbol) { var quote = quotes[symbol]; var instrument = TT.universe.index[symbol] || { name: symbol }; return symbol + " (" + instrument.name + ") " + quote.price.toFixed(quote.digits) + " " + (quote.change >= 0 ? "+" : "") + quote.change.toFixed(2) + "%"; }).join("\n");
     }
   };
-  TT.grid.mount(canvas, TT.store.getLayout(), renderWidget);
-  startAdapter();
+
+  applyFontScale(Number(settings.fontScale) || 1); mountWorkspace(); startAdapter();
   document.getElementById("btn-toggle-mode").addEventListener("click", function () { settings.dataMode = settings.dataMode === "demo" ? "live" : "demo"; TT.store.saveSettings(settings); startAdapter(); });
-  document.getElementById("btn-reset-layout").addEventListener("click", function () { if (window.confirm("Restore the default panel layout?")) { Object.keys(panels).forEach(function (id) { if (panels[id]._timer) window.clearInterval(panels[id]._timer); if (panels[id]._unsubscribe) panels[id]._unsubscribe(); }); panels = {}; TT.grid.mount(canvas, TT.store.resetLayout(), renderWidget); onData(quotes); } });
-  document.getElementById("btn-fullscreen").addEventListener("click", function () { if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(function () {}); } else { document.exitFullscreen().catch(function () {}); } });
+  document.getElementById("btn-reset-layout").addEventListener("click", function () { if (window.confirm("Restore this workspace's default panels?")) { TT.store.resetLayout(); mountWorkspace(); } });
+  document.getElementById("btn-fullscreen").addEventListener("click", function () { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(function () {}); else document.exitFullscreen().catch(function () {}); });
+  document.getElementById("btn-font-down").addEventListener("click", function () { applyFontScale(settings.fontScale - 0.1); });
+  document.getElementById("btn-font-up").addEventListener("click", function () { applyFontScale(settings.fontScale + 0.1); });
+  document.getElementById("btn-add-symbol").addEventListener("click", openSymbolSearch);
+  document.getElementById("btn-add-widget").addEventListener("click", function () { renderWidgetPicker(); widgetOverlay.hidden = false; });
+  document.getElementById("symbol-search-form").addEventListener("submit", function (event) {
+    event.preventDefault(); var query = document.getElementById("symbol-search-input").value.trim(); var results = document.getElementById("symbol-results"); if (!query) return;
+    if (window.location.protocol === "file:") { results.innerHTML = '<div class="detail-error">Global search requires the local launcher.</div>'; return; }
+    results.innerHTML = '<div class="detail-loading"><span class="loader"></span> SEARCHING GLOBAL MARKETS</div>';
+    window.fetch("/api/search?q=" + encodeURIComponent(query), { cache: "no-store" }).then(function (response) { if (!response.ok) throw new Error("Search unavailable"); return response.json(); }).then(function (payload) { renderSymbolResults(payload.results || []); }).catch(function (error) { results.innerHTML = '<div class="detail-error">' + error.message + '</div>'; });
+  });
+  document.querySelectorAll(".modal-close").forEach(function (button) { button.addEventListener("click", function () { closeModal(button.closest(".modal-overlay")); }); });
+  [symbolOverlay, widgetOverlay].forEach(function (overlay) { overlay.addEventListener("click", function (event) { if (event.target === overlay) closeModal(overlay); }); });
   document.addEventListener("click", function (event) { var target = event.target.closest("[data-symbol]"); if (target) TT.details.open(target.dataset.symbol); });
-  document.addEventListener("keydown", function (event) { var target = event.target.closest && event.target.closest("[data-symbol]"); if (target && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); TT.details.open(target.dataset.symbol); } });
+  document.addEventListener("keydown", function (event) { var target = event.target.closest && event.target.closest("[data-symbol]"); if (target && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); TT.details.open(target.dataset.symbol); } if (event.key === "Escape") { closeModal(symbolOverlay); closeModal(widgetOverlay); } });
   function clock() { document.getElementById("utc-clock").textContent = new Date().toISOString().slice(11, 19) + " UTC"; }
   clock(); window.setInterval(clock, 1000);
 })(window.TT = window.TT || {});

@@ -1,7 +1,7 @@
 /* ==========================================================================
    TANG TERMINAL — data/universe.js
    The instrument universe: every symbol the dashboard tracks, grouped by
-   widget. `live` holds the symbol used by the live adapter (Stooq format);
+   widget. `live` holds the provider symbol used by the live adapter;
    `base` is the demo adapter's anchor price; `digits` controls formatting.
    ========================================================================== */
 (function (TT) {
@@ -83,6 +83,57 @@
       { sym: "HG",  name: "Copper Futures",    unit: "lb", live: "hg.f",   base: 4.52,   digits: 3 }
     ],
 
+    /* ------------------------------------------------------ energy complex */
+    energy: [
+      { sym: "CL", name: "WTI Crude", live: "cl.f", base: 63.9, digits: 2, unit: "bbl" },
+      { sym: "BZ", name: "Brent Crude", live: "BZ=F", base: 67.4, digits: 2, unit: "bbl" },
+      { sym: "NG", name: "Natural Gas", live: "ng.f", base: 2.94, digits: 3, unit: "MMBtu" },
+      { sym: "RB", name: "RBOB Gasoline", live: "RB=F", base: 2.08, digits: 3, unit: "gal" },
+      { sym: "HO", name: "Heating Oil", live: "HO=F", base: 2.18, digits: 3, unit: "gal" }
+    ],
+
+    /* ------------------------------------------- broad commodity universe */
+    commodities: [
+      { group: "ENERGY", members: ["CL", "BZ", "NG", "RB", "HO"] },
+      { group: "METALS", members: ["XAU", "XAG", "HG", "XPT", "XPD", "ALI"] },
+      { group: "AGRICULTURE", members: ["ZC", "ZW", "ZS", "KC", "SB", "CC", "CT"] },
+      { group: "LIVESTOCK", members: ["LE", "HE"] }
+    ],
+
+    commodityExtras: [
+      { sym: "ALI", name: "Aluminium Futures", live: "ALI=F", base: 2500, digits: 2, unit: "t" },
+      { sym: "ZC", name: "Corn Futures", live: "ZC=F", base: 420, digits: 2, unit: "bu" },
+      { sym: "ZW", name: "Wheat Futures", live: "ZW=F", base: 535, digits: 2, unit: "bu" },
+      { sym: "ZS", name: "Soybean Futures", live: "ZS=F", base: 1020, digits: 2, unit: "bu" },
+      { sym: "KC", name: "Coffee Futures", live: "KC=F", base: 310, digits: 2, unit: "lb" },
+      { sym: "SB", name: "Sugar Futures", live: "SB=F", base: 18.2, digits: 2, unit: "lb" },
+      { sym: "CC", name: "Cocoa Futures", live: "CC=F", base: 7350, digits: 0, unit: "t" },
+      { sym: "CT", name: "Cotton Futures", live: "CT=F", base: 68, digits: 2, unit: "lb" },
+      { sym: "LE", name: "Live Cattle Futures", live: "LE=F", base: 218, digits: 2, unit: "lb" },
+      { sym: "HE", name: "Lean Hogs Futures", live: "HE=F", base: 95, digits: 2, unit: "lb" }
+    ],
+
+    /* ------------------------------------------------------ tanker equities */
+    tankers: [
+      { sym: "FRO", name: "Frontline", live: "fro.us", base: 22, digits: 2 },
+      { sym: "STNG", name: "Scorpio Tankers", live: "stng.us", base: 46, digits: 2 },
+      { sym: "DHT", name: "DHT Holdings", live: "dht.us", base: 12, digits: 2 },
+      { sym: "INSW", name: "International Seaways", live: "insw.us", base: 42, digits: 2 },
+      { sym: "TNK", name: "Teekay Tankers", live: "tnk.us", base: 48, digits: 2 },
+      { sym: "NAT", name: "Nordic American", live: "nat.us", base: 3.4, digits: 2 },
+      { sym: "TRMD", name: "TORM", live: "trmd.us", base: 22, digits: 2 },
+      { sym: "ASC", name: "Ardmore Shipping", live: "asc.us", base: 13, digits: 2 }
+    ],
+
+    /* ------------------------------------------------ cross-asset signals */
+    macro: [
+      { sym: "VIX", name: "CBOE Volatility", live: "^VIX", base: 18, digits: 2 },
+      { sym: "DXY", name: "US Dollar Index", live: "DX-Y.NYB", base: 98, digits: 3 },
+      { sym: "US10Y", name: "US 10Y Yield", live: "^TNX", base: 4.25, digits: 3 },
+      { sym: "EURUSD", name: "EUR / USD", live: "EURUSD=X", base: 1.16, digits: 4 },
+      { sym: "BTC", name: "Bitcoin USD", live: "BTC-USD", base: 110000, digits: 0 }
+    ],
+
     /* -------------------------------------------------------- world clocks */
     clocks: [
       { city: "SYDNEY",     tz: "Australia/Sydney",     open: 10, close: 16 },
@@ -105,6 +156,10 @@
     addAll(TT.universe.indices);
     addAll(TT.universe.stocks);
     addAll(TT.universe.metals);
+    addAll(TT.universe.energy);
+    addAll(TT.universe.commodityExtras);
+    addAll(TT.universe.tankers);
+    addAll(TT.universe.macro);
     TT.universe.heatmap.forEach(function (g) { addAll(g.members); });
     return map;
   })();

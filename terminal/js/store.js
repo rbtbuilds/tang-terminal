@@ -11,6 +11,8 @@
   var LAYOUT_KEY = PREFIX + "layout.v1";
   var SETTINGS_KEY = PREFIX + "settings.v1";
   var WATCHLIST_KEY = PREFIX + "watchlist.v1";
+  var CUSTOM_SYMBOLS_KEY = PREFIX + "symbols.v1";
+  var WORKSPACES_KEY = PREFIX + "workspaces.v1";
 
   /** Default widget layout: order + size for every known widget id. */
   var DEFAULT_LAYOUT = [
@@ -23,8 +25,28 @@
     { id: "assistant", size: "lg" }
   ];
 
+  var WORKSPACES = [
+    { id: "markets", label: "MARKETS" },
+    { id: "energy", label: "ENERGY & COMMODITIES" },
+    { id: "research", label: "RESEARCH" }
+  ];
+
+  var DEFAULT_LAYOUTS = {
+    markets: DEFAULT_LAYOUT,
+    energy: [
+      { id: "energy", size: "md" }, { id: "commodities", size: "md" },
+      { id: "tankers", size: "md" }, { id: "macro", size: "md" },
+      { id: "watchlist", size: "md" }, { id: "assistant", size: "lg" }
+    ],
+    research: [
+      { id: "watchlist", size: "md" }, { id: "macro", size: "md" },
+      { id: "indices", size: "md" }, { id: "assistant", size: "lg" }
+    ]
+  };
+
   var DEFAULT_SETTINGS = {
     dataMode: "demo",                 // "demo" | "live"
+    fontScale: 1,
     ollama: {
       host: "http://localhost:11434",
       model: ""                       // empty = auto-pick first installed model
@@ -52,35 +74,56 @@
     }
   }
 
-  TT.store = {
-    /** Returns the persisted layout, merged with defaults for new widgets. */
-    getLayout: function () {
-      var saved = readJSON(LAYOUT_KEY, null);
-      if (!Array.isArray(saved) || saved.length === 0) {
-        return DEFAULT_LAYOUT.slice();
+  function copyLayout(layout) {
+    return layout.map(function (entry) { return { id: entry.id, size: entry.size }; });
+  }
+
+  function workspaceState() {
+    var saved = readJSON(WORKSPACES_KEY, null);
+    if (saved && saved.layouts && saved.active) return saved;
+    var legacy = readJSON(LAYOUT_KEY, null);
+    return {
+      active: "markets",
+      layouts: {
+        markets: Array.isArray(legacy) && legacy.length ? legacy : copyLayout(DEFAULT_LAYOUTS.markets),
+        energy: copyLayout(DEFAULT_LAYOUTS.energy),
+        research: copyLayout(DEFAULT_LAYOUTS.research)
       }
-      // Keep saved entries, then append any default widget the save predates.
-      var seen = {};
-      var layout = [];
-      saved.forEach(function (entry) {
-        if (entry && typeof entry.id === "string" && !seen[entry.id]) {
-          seen[entry.id] = true;
-          layout.push({ id: entry.id, size: entry.size || "md" });
-        }
-      });
-      DEFAULT_LAYOUT.forEach(function (entry) {
-        if (!seen[entry.id]) layout.push({ id: entry.id, size: entry.size });
-      });
-      return layout;
+    };
+  }
+
+  TT.store = {
+    /** Returns the current workspace layout, migrating the original layout once. */
+    getLayout: function () {
+      var state = workspaceState();
+      return copyLayout(state.layouts[state.active] || DEFAULT_LAYOUTS.markets);
     },
 
     saveLayout: function (layout) {
-      writeJSON(LAYOUT_KEY, layout);
+      var state = workspaceState(); state.layouts[state.active] = copyLayout(layout); writeJSON(WORKSPACES_KEY, state);
     },
 
     resetLayout: function () {
-      writeJSON(LAYOUT_KEY, DEFAULT_LAYOUT);
-      return DEFAULT_LAYOUT.slice();
+      var state = workspaceState(); state.layouts[state.active] = copyLayout(DEFAULT_LAYOUTS[state.active] || DEFAULT_LAYOUTS.markets); writeJSON(WORKSPACES_KEY, state); return copyLayout(state.layouts[state.active]);
+    },
+
+    getWorkspaces: function () { return WORKSPACES.slice(); },
+
+    getActiveWorkspace: function () { return workspaceState().active; },
+
+    setActiveWorkspace: function (id) {
+      if (!DEFAULT_LAYOUTS[id]) return false;
+      var state = workspaceState(); state.active = id; writeJSON(WORKSPACES_KEY, state); return true;
+    },
+
+    addWidget: function (id, size) {
+      var layout = this.getLayout();
+      if (layout.some(function (entry) { return entry.id === id; })) return layout;
+      layout.push({ id: id, size: size || "md" }); this.saveLayout(layout); return layout;
+    },
+
+    removeWidget: function (id) {
+      var layout = this.getLayout().filter(function (entry) { return entry.id !== id; }); this.saveLayout(layout); return layout;
     },
 
     getSettings: function () {
@@ -106,6 +149,14 @@
 
     saveWatchlist: function (symbols) {
       return writeJSON(WATCHLIST_KEY, symbols);
+    },
+
+    getCustomSymbols: function () {
+      var saved = readJSON(CUSTOM_SYMBOLS_KEY, []); return Array.isArray(saved) ? saved : [];
+    },
+
+    saveCustomSymbols: function (symbols) {
+      return writeJSON(CUSTOM_SYMBOLS_KEY, symbols);
     }
   };
 })(window.TT = window.TT || {});

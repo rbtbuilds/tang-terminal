@@ -5,7 +5,7 @@
   function allInstruments() {
     var seen = {};
     var result = [];
-    [TT.universe.indices, TT.universe.stocks, TT.universe.metals].forEach(function (list) {
+    [TT.universe.indices, TT.universe.stocks, TT.universe.metals, TT.universe.energy, TT.universe.commodityExtras, TT.universe.tankers, TT.universe.macro, TT.symbols ? TT.symbols.all() : []].forEach(function (list) {
       list.forEach(function (item) {
         if (!seen[item.sym]) { seen[item.sym] = true; result.push(item); }
       });
@@ -30,6 +30,7 @@
     this.timer = null;
     this.rows = {};
     allInstruments().forEach(function (item) {
+      if (!Number.isFinite(item.base)) return;
       var change = seededChange(item.sym);
       this.rows[item.sym] = {
         sym: item.sym, price: item.base * (1 + change / 100), change: change,

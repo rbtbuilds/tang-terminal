@@ -159,7 +159,7 @@
 
   function simulatedPayload(symbol, chartRange) {
     var instrument = TT.universe.index[symbol]; var count = chartRange === "1d" ? 78 : chartRange === "5d" ? 120 : chartRange === "5y" ? 260 : 100;
-    var seed = instrument.base; var points = []; var now = Date.now() / 1000;
+    var seed = Number(instrument.base) || 100; var points = []; var now = Date.now() / 1000;
     for (var index = 0; index < count; index += 1) { var wave = Math.sin(index * 0.31 + symbol.length) * 0.004; seed *= 1 + wave + ((index % 7) - 3) * 0.00025; points.push({ t: now - (count - index) * 86400, o: seed * 0.997, h: seed * 1.006, l: seed * 0.994, c: seed, v: null }); }
     return { symbol: symbol, range: chartRange, interval: "1d", currency: "USD", exchange: "OFFLINE DEMO", marketTime: Math.floor(now), price: seed, previousClose: points[points.length - 2].c, points: points, news: [], provider: "SIMULATED — NOT MARKET DATA" };
   }

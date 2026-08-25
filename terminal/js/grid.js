@@ -47,8 +47,8 @@
         });
         canvas.appendChild(panel);
       });
-      canvas.addEventListener("dragover", function (event) { event.preventDefault(); canvas.classList.add("drop-target"); });
-      canvas.addEventListener("drop", function () { canvas.classList.remove("drop-target"); });
+      canvas.ondragover = function (event) { event.preventDefault(); canvas.classList.add("drop-target"); };
+      canvas.ondrop = function () { canvas.classList.remove("drop-target"); };
     },
     cycleSize: function (panel) {
       var sizes = ["sm", "md", "lg"];
