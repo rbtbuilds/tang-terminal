@@ -9,6 +9,7 @@ import json
 import mimetypes
 import os
 import pathlib
+import re
 import secrets
 import socket
 import ssl
@@ -18,6 +19,7 @@ import threading
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
@@ -45,6 +47,11 @@ RANGE_INTERVALS = {
 }
 QUOTE_CACHE: dict[str, tuple[float, dict[str, dict]]] = {}
 QUOTE_CACHE_LOCK = threading.Lock()
+INTELLIGENCE_CACHE: tuple[float, dict] | None = None
+INTELLIGENCE_CACHE_LOCK = threading.Lock()
+SEC_USER_AGENT = os.environ.get(
+    "TANG_SEC_USER_AGENT", "TANG Terminal local research tang-terminal@example.invalid"
+)
 
 # Busy global streams are intentionally narrowed to the major energy corridors.
 AIS_CORRIDORS = [
@@ -433,8 +440,129 @@ def fetch_news(symbol: str) -> list[dict]:
     return news
 
 
+def fetch_text(url: str, user_agent: str = "Mozilla/5.0 TANG-Terminal/3.1") -> str:
+    last_error: Exception | None = None
+    for attempt in range(2):
+        try:
+            request = urllib.request.Request(url, headers={"User-Agent": user_agent})
+            with urllib.request.urlopen(request, timeout=20) as response:
+                return response.read().decode("utf-8", "replace")
+        except (OSError, urllib.error.URLError) as error:
+            last_error = error
+            if attempt == 0:
+                time.sleep(0.4)
+    raise last_error or OSError("Upstream request failed")
+
+
+def xml_value(node: ET.Element, path: str) -> str:
+    found = node.find(path)
+    return (found.text or "").strip() if found is not None else ""
+
+
+def fetch_sec_insiders(limit: int = 10) -> list[dict]:
+    """Read recent open-market purchases/sales from official Form 4 XML."""
+    feed = fetch_text(
+        "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=4&owner=include&count=60&output=atom",
+        SEC_USER_AGENT,
+    )
+    atom = ET.fromstring(feed)
+    links = []
+    filing_ids = set()
+    for entry in atom.findall("{http://www.w3.org/2005/Atom}entry"):
+        link = entry.find("{http://www.w3.org/2005/Atom}link")
+        href = link.get("href", "") if link is not None else ""
+        filing_id = href.rsplit("/", 1)[-1] if href else ""
+        if href and filing_id not in filing_ids:
+            links.append(href)
+            filing_ids.add(filing_id)
+    rows = []
+    for filing_url in links[:24]:
+        try:
+            index_html = fetch_text(filing_url, SEC_USER_AGENT)
+            matches = [path for path in re.findall(r'href="([^"]+\.xml)"', index_html, re.I) if "/xsl" not in path]
+            if not matches:
+                continue
+            xml_url = urllib.parse.urljoin(filing_url, matches[-1].replace("&amp;", "&"))
+            root = ET.fromstring(fetch_text(xml_url, SEC_USER_AGENT))
+            issuer = xml_value(root, "issuer/issuerName")
+            ticker = xml_value(root, "issuer/issuerTradingSymbol")
+            owner = xml_value(root, "reportingOwner/reportingOwnerId/rptOwnerName")
+            for transaction in root.findall("nonDerivativeTable/nonDerivativeTransaction"):
+                code = xml_value(transaction, "transactionCoding/transactionCode")
+                if code not in ("P", "S"):
+                    continue
+                shares = float(xml_value(transaction, "transactionAmounts/transactionShares/value") or 0)
+                price = float(xml_value(transaction, "transactionAmounts/transactionPricePerShare/value") or 0)
+                rows.append({
+                    "symbol": ticker, "issuer": issuer, "owner": owner,
+                    "side": "BUY" if code == "P" else "SELL",
+                    "date": xml_value(transaction, "transactionDate/value"),
+                    "shares": shares, "price": price, "notional": shares * price,
+                    "link": filing_url,
+                })
+                if len(rows) >= limit:
+                    return rows
+            time.sleep(0.11)
+        except (OSError, ValueError, ET.ParseError, urllib.error.URLError):
+            continue
+    return rows
+
+
+def fetch_congress_trades(limit: int = 12) -> tuple[list[dict], dict]:
+    """Use CongressInvests as a normalized index; row links remain official filings."""
+    payload = json.loads(fetch_text(
+        f"https://congressinfor-production.up.railway.app/trades/recent?limit={limit}"
+    ))
+    trades = payload.get("trades") or payload.get("data") or []
+    updated = payload.get("last_updated") or payload.get("lastUpdated") or ""
+    parsed_updated = 0.0
+    if updated:
+        try:
+            parsed_updated = time.mktime(time.strptime(updated[:19], "%Y-%m-%dT%H:%M:%S"))
+        except ValueError:
+            pass
+    return trades[:limit], {
+        "provider": "CongressInvests", "lastUpdated": updated,
+        "stale": not parsed_updated or time.time() - parsed_updated > 172800,
+    }
+
+
+def fetch_intelligence() -> dict:
+    global INTELLIGENCE_CACHE
+    with INTELLIGENCE_CACHE_LOCK:
+        cache_ttl = 90 if INTELLIGENCE_CACHE and INTELLIGENCE_CACHE[1].get("errors") else 900
+        if INTELLIGENCE_CACHE and time.time() - INTELLIGENCE_CACHE[0] < cache_ttl:
+            return INTELLIGENCE_CACHE[1]
+    payload = {"retrievedAt": int(time.time()), "news": [], "insiders": [], "congress": [], "sources": {}, "errors": {}}
+    try:
+        seen = set()
+        for symbol in ("SPY", "QQQ", "CL=F"):
+            for item in fetch_news(symbol):
+                key = item["link"]
+                if key not in seen:
+                    item["context"] = symbol
+                    payload["news"].append(item)
+                    seen.add(key)
+        payload["news"] = sorted(payload["news"], key=lambda row: row["published"], reverse=True)[:10]
+        payload["sources"]["news"] = {"provider": "Yahoo Finance search; links open publishers"}
+    except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError) as error:
+        payload["errors"]["news"] = str(error)
+    try:
+        payload["insiders"] = fetch_sec_insiders()
+        payload["sources"]["insiders"] = {"provider": "SEC EDGAR Forms 4", "scope": "Open-market P/S only"}
+    except (OSError, ValueError, ET.ParseError, urllib.error.URLError) as error:
+        payload["errors"]["insiders"] = str(error)
+    try:
+        payload["congress"], payload["sources"]["congress"] = fetch_congress_trades()
+    except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError) as error:
+        payload["errors"]["congress"] = str(error)
+    with INTELLIGENCE_CACHE_LOCK:
+        INTELLIGENCE_CACHE = (time.time(), payload)
+    return payload
+
+
 class Handler(SimpleHTTPRequestHandler):
-    server_version = "TangTerminal/3.0"
+    server_version = "TangTerminal/3.1"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
@@ -504,6 +632,9 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(chart)
             except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError) as error:
                 self.send_json({"error": "Market data unavailable", "detail": str(error)}, 503)
+            return
+        if parsed.path == "/api/intelligence":
+            self.send_json(fetch_intelligence())
             return
         if parsed.path == "/api/ais/positions":
             self.send_json(AIS_MONITOR.snapshot())

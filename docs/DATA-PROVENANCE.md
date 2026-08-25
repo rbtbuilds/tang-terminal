@@ -24,6 +24,18 @@ SMA20, SMA50, RSI14, ATR14, support and resistance are calculated locally from t
 
 Crack-spread values are simple product-minus-crude proxies. Tanker-equity panels contain listed operators, not freight rates. Indicative map routes are visual context, not actual vessel histories.
 
+## News and disclosures
+
+Overview headlines are discovered through Yahoo Finance search and link to the original publisher. A headline is not independently verified by TANG.
+
+Company-insider rows are parsed from official SEC EDGAR Form 4 XML and limited to transaction codes P and S (reported open-market purchase and sale). They are reported transactions, not real-time orders, and can include amendments or filing corrections.
+
+Congressional rows are normalized by CongressInvests from House and Senate public disclosures, with source-document links preserved. TANG displays the adapter update state and warns when it is stale. Periodic transaction reports may legally arrive after a transaction, so the board states a lag of up to 45 days. Neither disclosure set is a complete order-flow feed or trading signal.
+
+## Analyst research contract
+
+Analyst recommendations are licensed, attributed research rather than public facts. Any future adapter must retain the source provider, named institution when supplied, rating/action, publication date, coverage count, target currency, freshness and entitlement level. Consensus labels such as `Strong Buy` must be presented as the provider's aggregation—not as advice from TANG or its local model. Missing or plan-restricted fields must never be inferred.
+
 ## AIS semantics
 
 AISStream data is event-driven and has no uptime or delivery SLA. The browser receives only normalized position fields: MMSI, name, latitude, longitude, speed, course, class and observation time. Static ship classification may arrive after a position, so unknown targets remain explicitly unclassified. The configured stream covers selected energy corridors and should not be described as complete global satellite coverage.
@@ -35,4 +47,3 @@ The Ollama prompt receives only the normalized quote snapshot and its provenance
 ## Credential handling
 
 `.tang-terminal.env` is loaded by the local server and ignored by Git. API endpoints must expose configuration state only, never credential values. A release ZIP containing that file is sensitive and should be distributed privately; rotate the credential if disclosure is suspected.
-

@@ -16,6 +16,7 @@ The browser owns presentation and device-local preferences. The local server own
 - `data/adapter.js` normalizes demo and connected quote updates.
 - `widgets/` contains isolated renderers. A widget exposes `create()` and may expose `update(quotes)` plus cleanup handles.
 - `details.js` owns on-demand chart, technical, scenario, provenance and news rendering.
+- `intelligence.js` owns the single cached browser request for overview news and disclosure widgets.
 - `ollama.js` owns the local-model request contract and evidence-constrained system prompt.
 
 ## Layout lifecycle
@@ -28,13 +29,13 @@ In edit mode, pointer movement on the lower handle stores an explicit `heightPx`
 
 Pages use URL hashes and a shared shell:
 
-- Overview — compact global situational awareness.
+- Overview — global briefing with quotes, news, movements and public disclosures.
 - Markets — indices, sectors, leaders, metals and cross-asset signals.
 - Energy — the commodity complex, product spreads and tanker equities.
 - Shipping — dominant AIS map linked to tanker and energy monitors.
-- Research — watchlist, cross-asset context and the local AI assistant.
+- Research — watchlist, cross-asset context and recent briefing headlines.
 
-The watchlist rail and command field remain available across pages. Selecting any market symbol opens the same research context.
+The watchlist rail, command field and collapsible local-AI dock remain available across pages. Selecting any market symbol opens the same research context.
 
 ## Server services
 
@@ -43,6 +44,7 @@ The watchlist rail and command field remain available across pages. Selecting an
 - `/api/quotes` — batched, cached normalized quote indications.
 - `/api/search` — provider-supported security discovery.
 - `/api/instrument` — OHLCV, provenance and recent headline metadata.
+- `/api/intelligence` — cached, normalized news, SEC Form 4 and Congressional disclosure briefing.
 - `/api/ais/positions` — bounded, key-free browser snapshot of recent AIS positions.
 - `/api/ollama/*` — local Ollama proxy.
 

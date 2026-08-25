@@ -10,6 +10,8 @@ TANG Terminal is a compact, terminal-style global market workstation. It runs wi
 - Eight daylight-saving-aware world session clocks
 - Demo and live data adapters, plus a scrolling market tape
 - Local AI assistant backed by an Ollama model of your choice
+- Persistent collapsible AI dock shared by every workspace
+- Overview briefing with recent news, quote-derived movers, educational setups, and public disclosures
 - Click-through instrument research with seven chart ranges, calculated technicals, educational bull/bear scenarios, and recent headlines
 - Persistent watchlist panel; pin or unpin an instrument from its research drawer
 - Global security search for provider-supported LSE, NYSE, Nasdaq and other exchange-listed instruments
@@ -53,7 +55,7 @@ Open <http://127.0.0.1:8787>. Direct `file://` opening remains supported in demo
 
 1. Install Ollama from its official distribution.
 2. Start Ollama and pull a model, for example: `ollama pull llama3.2:3b`.
-3. Launch TANG Terminal, open the assistant panel, and select **CONNECT**.
+3. Launch TANG Terminal, open the assistant dock at the bottom, and select **CONNECT**.
 4. Choose any installed model from the model menu.
 
 By default the launcher bridges to `http://127.0.0.1:11434`. To use another endpoint, set `TANG_OLLAMA_URL` before launching the local server. When opened directly, the assistant uses the host entered in the panel; Ollama must allow the page origin.
@@ -96,6 +98,12 @@ Layout and preferences are stored only in the browser's `localStorage`. Differen
 
 The technical signal is calculated locally from the selected range using SMA20, SMA50, RSI14, ATR14, and recent support/resistance. Bull and bear scenarios are mechanical educational examples—not individualized recommendations or executable orders. News headlines are fetched on demand and link to the original publisher through Yahoo Finance search.
 
+The Overview disclosure board reads open-market purchase/sale codes from official SEC Form 4 filings. Congressional rows use CongressInvests as a normalizer but retain links to official disclosures; the widget exposes a stale-provider warning and notes the statutory reporting lag. These are filing monitors, not complete order-flow feeds.
+
+## Open-source research roadmap
+
+TANG separates authoritative public records, attributed provider research, and reproducible local calculations. Named-bank upgrades, consensus labels, estimates, and targets must retain their provider, institution, publication date, coverage and freshness; they are never relabelled as TANG advice. The evaluated adapter plan is in [docs/RETAIL-RESEARCH-ROADMAP.md](docs/RETAIL-RESEARCH-ROADMAP.md).
+
 ## Project structure
 
 ```text
@@ -107,6 +115,7 @@ terminal/
   js/symbols.js           Persistent user-added security registry
   js/data/                Instrument universe and data adapters
   js/widgets/             Isolated panel renderers
+  js/intelligence.js      Shared cached briefing/disclosure client
   js/grid.js              Collision-free auto layout and pointer resizing
   js/ollama.js            Local model client
   js/main.js              Application orchestration

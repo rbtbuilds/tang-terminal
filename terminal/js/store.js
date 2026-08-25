@@ -12,15 +12,16 @@
   var SETTINGS_KEY = PREFIX + "settings.v1";
   var WATCHLIST_KEY = PREFIX + "watchlist.v1";
   var CUSTOM_SYMBOLS_KEY = PREFIX + "symbols.v1";
-  var WORKSPACES_KEY = PREFIX + "workspaces.v1";
+  var WORKSPACES_KEY = PREFIX + "workspaces.v2";
 
   /** Default widget layout: order + size for every known widget id. */
   var DEFAULT_LAYOUT = [
     { id: "clocks", size: "lg" },
     { id: "indices", size: "md" },
     { id: "heatmap", size: "md" },
-    { id: "stocks", size: "md" },
-    { id: "metals", size: "md" }
+    { id: "news", size: "md" },
+    { id: "action", size: "md" },
+    { id: "disclosures", size: "lg" }
   ];
 
   var WORKSPACES = [
@@ -48,13 +49,14 @@
     ],
     research: [
       { id: "watchlist", size: "sm" }, { id: "macro", size: "sm" },
-      { id: "indices", size: "sm" }, { id: "assistant", size: "lg" }
+      { id: "indices", size: "sm" }, { id: "news", size: "lg" }
     ]
   };
 
   var DEFAULT_SETTINGS = {
     dataMode: "demo",                 // "demo" | "live"
     fontScale: 1,
+    aiDockOpen: true,
     ollama: {
       host: "http://localhost:11434",
       model: ""                       // empty = auto-pick first installed model

@@ -16,7 +16,7 @@
   <header id="titlebar" class="titlebar">
     <div class="titlebar-left">
       <span class="logo">▮▮ TANG TERMINAL</span>
-      <span class="version" id="app-version">v3.0.0</span>
+      <span class="version" id="app-version">v3.1.0</span>
     </div>
 
     <form id="command-form" class="command-form" role="search">
@@ -65,6 +65,14 @@
       <main id="canvas" class="canvas" aria-label="Market dashboard canvas"></main>
     </section>
   </div>
+
+  <section id="ai-dock" class="ai-dock" aria-label="Persistent local AI assistant">
+    <header class="ai-dock-header">
+      <span><strong>TANG AI</strong> · LOCAL OLLAMA ASSISTANT</span>
+      <button id="ai-dock-toggle" class="tb-btn" aria-expanded="true">COLLAPSE ↓</button>
+    </header>
+    <div id="ai-dock-content" class="ai-dock-content"></div>
+  </section>
 
   <!-- ======================= Bottom ticker ======================= -->
   <footer id="tickerbar" class="tickerbar" aria-label="Scrolling market ticker">
@@ -117,6 +125,8 @@
   <script src="js/widgets/metals.js"></script>
   <script src="js/widgets/markets.js"></script>
   <script src="js/widgets/shipping.js"></script>
+  <script src="js/intelligence.js"></script>
+  <script src="js/widgets/intelligence.js"></script>
   <script src="js/ollama.js"></script>
   <script src="js/widgets/assistant.js"></script>
   <script src="js/details.js"></script>
