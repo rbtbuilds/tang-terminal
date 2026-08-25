@@ -1,4 +1,4 @@
-TANG TERMINAL 3.1.0
+TANG TERMINAL 3.1.1
 ===================
 
 FASTEST START
@@ -12,7 +12,8 @@ Offline: Double-click index.html. Demo data and layout persistence work without
 Move the browser window to your chosen monitor, then select FULLSCREEN.
 
 Use EDIT LAYOUT to move, resize or remove a widget. Drag the dotted lower edge
-to change height; select the height label to return to automatic content size.
+to change height and the highlighted right edge to change width. Width and
+height persist per page; select the height label to return to automatic height.
 
 The Shipping Map works in demo mode offline. Live AIS uses the server-only key
 in .tang-terminal.env. Never share a configured release ZIP publicly.

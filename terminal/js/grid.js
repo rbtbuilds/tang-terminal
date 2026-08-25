@@ -5,6 +5,7 @@
   var ROW_HEIGHT = 8;
   var GAP = 6;
   var MIN_HEIGHT = 118;
+  var MIN_COLUMNS = 3;
   var draggedId = null;
   var editing = false;
   var observers = [];
@@ -14,6 +15,7 @@
       return {
         id: node.dataset.widgetId,
         size: node.dataset.size || "md",
+        widthCols: node.dataset.widthCols ? Math.round(Number(node.dataset.widthCols)) : null,
         heightPx: node.dataset.heightPx ? Math.round(Number(node.dataset.heightPx)) : null
       };
     });
@@ -40,7 +42,18 @@
     if (heightButton) heightButton.textContent = manual ? "↕ " + Math.round(height) : "↕ AUTO";
   }
 
-  function schedule(panel) { window.requestAnimationFrame(function () { place(panel); }); }
+  function sizeColumns(size) { return size === "sm" ? 4 : size === "lg" ? 12 : 6; }
+
+  function applyWidth(panel) {
+    var requested = Number(panel.dataset.widthCols) || sizeColumns(panel.dataset.size || "md");
+    var viewport = panel.parentNode ? panel.parentNode.clientWidth : window.innerWidth;
+    var effective = viewport <= 680 ? 12 : viewport <= 1180 ? Math.max(6, requested) : requested;
+    panel.style.gridColumn = "span " + Math.max(MIN_COLUMNS, Math.min(12, Math.round(effective)));
+    var button = panel.querySelector(".size-btn");
+    if (button) button.textContent = "↔ " + Math.round(requested) + "/12";
+  }
+
+  function schedule(panel) { window.requestAnimationFrame(function () { applyWidth(panel); place(panel); }); }
 
   function clearObservers() {
     observers.forEach(function (observer) { observer.disconnect(); });
@@ -89,6 +102,39 @@
     handle.addEventListener("pointercancel", end);
   }
 
+  function startWidthResize(event, panel) {
+    if (!editing) return;
+    event.preventDefault();
+    event.stopPropagation();
+    var canvas = panel.parentNode;
+    var startX = event.clientX;
+    var startWidth = panel.getBoundingClientRect().width;
+    var handle = event.currentTarget;
+    handle.setPointerCapture(event.pointerId);
+    panel.classList.add("resizing-width");
+
+    function move(moveEvent) {
+      var canvasWidth = canvas.clientWidth;
+      var columnWidth = (canvasWidth - GAP * 11) / 12;
+      var nextWidth = Math.max(columnWidth * MIN_COLUMNS, startWidth + moveEvent.clientX - startX);
+      var columns = Math.max(MIN_COLUMNS, Math.min(12, Math.round((nextWidth + GAP) / (columnWidth + GAP))));
+      panel.dataset.widthCols = columns;
+      applyWidth(panel);
+      TT.grid.refresh(canvas);
+    }
+    function end(endEvent) {
+      if (handle.hasPointerCapture(endEvent.pointerId)) handle.releasePointerCapture(endEvent.pointerId);
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", end);
+      handle.removeEventListener("pointercancel", end);
+      panel.classList.remove("resizing-width");
+      persist(canvas);
+    }
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  }
+
   TT.grid = {
     mount: function (canvas, layout, renderWidget) {
       clearObservers();
@@ -98,11 +144,12 @@
         if (!panel) return;
         panel.dataset.widgetId = entry.id;
         panel.dataset.size = entry.size || "md";
+        panel.dataset.widthCols = entry.widthCols || "";
         panel.dataset.heightPx = entry.heightPx || "";
         panel.classList.add("span-" + (entry.size || "md"));
         panel.draggable = editing;
         panel.addEventListener("dragstart", function (event) {
-          if (!editing) { event.preventDefault(); return; }
+          if (!editing || event.target.closest(".panel-resize-handle, .panel-width-resize-handle")) { event.preventDefault(); return; }
           draggedId = entry.id;
           panel.classList.add("dragging");
           event.dataTransfer.effectAllowed = "move";
@@ -133,6 +180,8 @@
         });
         var handle = panel.querySelector(".panel-resize-handle");
         if (handle) handle.addEventListener("pointerdown", function (event) { startResize(event, panel); });
+        var widthHandle = panel.querySelector(".panel-width-resize-handle");
+        if (widthHandle) { widthHandle.draggable = false; widthHandle.addEventListener("pointerdown", function (event) { startWidthResize(event, panel); }); }
         canvas.appendChild(panel);
         observe(panel);
         schedule(panel);
@@ -142,8 +191,8 @@
 
     refresh: function (target) {
       if (!target) return;
-      if (target.classList && target.classList.contains("panel")) place(target);
-      else Array.prototype.forEach.call(target.children || [], place);
+      if (target.classList && target.classList.contains("panel")) { applyWidth(target); place(target); }
+      else Array.prototype.forEach.call(target.children || [], function (panel) { applyWidth(panel); place(panel); });
     },
 
     setEditing: setEditing,
@@ -154,6 +203,7 @@
       var next = sizes[(sizes.indexOf(panel.dataset.size) + 1) % sizes.length];
       sizes.forEach(function (size) { panel.classList.remove("span-" + size); });
       panel.dataset.size = next;
+      panel.dataset.widthCols = sizeColumns(next);
       panel.classList.add("span-" + next);
       persist(panel.parentNode);
       TT.grid.refresh(panel.parentNode);

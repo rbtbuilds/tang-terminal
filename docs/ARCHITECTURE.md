@@ -23,7 +23,7 @@ The browser owns presentation and device-local preferences. The local server own
 
 Each page has an independent ordered layout in localStorage. In automatic mode, `grid.js` measures the panel header plus the body's natural `scrollHeight`, converts the result to an 8-pixel row grid and assigns `grid-row-end`. A `MutationObserver` remeasures after quote or content changes.
 
-In edit mode, pointer movement on the lower handle stores an explicit `heightPx`. CSS Grid reserves the corresponding row span before placing later panels, so panels cannot overlap. Selecting the height button clears `heightPx` and restores natural measurement. Width remains a three-step 4/6/12-column control.
+In edit mode, pointer movement on the lower handle stores an explicit `heightPx`; the right-edge handle converts pointer movement into an exact `widthCols` span on the 12-column grid. CSS Grid reserves both dimensions before placing later panels, so panels reflow instead of overlapping. Selecting the height button clears `heightPx` and restores natural measurement, while the width button remains a quick 4/6/12-column preset cycle. Responsive minimums are applied only at render time, preserving the user's desktop span.
 
 ## Page model
 

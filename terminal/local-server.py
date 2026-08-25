@@ -562,7 +562,7 @@ def fetch_intelligence() -> dict:
 
 
 class Handler(SimpleHTTPRequestHandler):
-    server_version = "TangTerminal/3.1"
+    server_version = "TangTerminal/3.1.1"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)

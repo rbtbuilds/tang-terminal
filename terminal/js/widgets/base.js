@@ -10,7 +10,9 @@
       '<button class="hdr-btn size-btn" title="Cycle panel width" aria-label="Resize ' + title + '">↔ SIZE</button>' +
       '<button class="hdr-btn height-btn" title="Return to natural content height" aria-label="Automatically size ' + title + '">↕ AUTO</button>' +
       '<button class="hdr-btn remove-btn" title="Remove from this workspace" aria-label="Remove ' + title + '">×</button></header>' +
-      '<div class="panel-body"></div><div class="panel-resize-handle" aria-hidden="true" title="Drag to resize height"><span>···</span></div>';
+      '<div class="panel-body"></div>' +
+      '<div class="panel-width-resize-handle" aria-hidden="true" title="Drag to resize width"><span>⋮</span></div>' +
+      '<div class="panel-resize-handle" aria-hidden="true" title="Drag to resize height"><span>···</span></div>';
     panel.querySelector(".size-btn").addEventListener("click", function () { TT.grid.cycleSize(panel); });
     panel.querySelector(".height-btn").addEventListener("click", function () { TT.grid.resetHeight(panel); });
     panel.querySelector(".remove-btn").addEventListener("click", function () { if (TT.app && TT.app.removeWidget) TT.app.removeWidget(id); });

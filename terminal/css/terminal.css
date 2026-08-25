@@ -866,7 +866,8 @@ table.quote-table tr:focus-visible td:first-child strong { color: var(--accent);
 }
 .panel-header .grip,
 .panel-header .hdr-btn,
-.panel-resize-handle { display: none; }
+.panel-resize-handle,
+.panel-width-resize-handle { display: none; }
 .layout-editing .panel { border-color: var(--border-bright); }
 .layout-editing .panel-header .grip,
 .layout-editing .panel-header .hdr-btn { display: inline-block; }
@@ -884,8 +885,23 @@ table.quote-table tr:focus-visible td:first-child strong { color: var(--accent);
   background: linear-gradient(transparent, rgba(47, 107, 65, .45));
   touch-action: none;
 }
+.layout-editing .panel-width-resize-handle {
+  position: absolute;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  top: 28px;
+  right: 0;
+  bottom: 10px;
+  width: 9px;
+  cursor: ew-resize;
+  color: var(--fg-dim);
+  background: linear-gradient(90deg, transparent, rgba(47, 107, 65, .55));
+  touch-action: none;
+}
+.layout-editing .panel-width-resize-handle span { opacity: .8; }
 .layout-editing .panel.manual-height .height-btn { color: var(--amber); }
-.panel.resizing { border-color: var(--amber); }
+.panel.resizing, .panel.resizing-width { border-color: var(--amber); }
 .panel.drop-before { box-shadow: 0 -3px 0 var(--accent); }
 .panel.drop-after { box-shadow: 0 3px 0 var(--accent); }
 

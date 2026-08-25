@@ -20,7 +20,7 @@ TANG Terminal is a compact, terminal-style global market workstation. It runs wi
 - Local Natural Earth world map with live AISStream energy-corridor positions and an offline demo fallback
 - Add/remove widget catalog with dedicated energy, broad commodities, tanker-equity and cross-asset panels
 - Adjustable 85–145% terminal typography with the preference stored locally
-- Content-measured widget heights and continuous lower-edge drag resizing without overlap
+- Content-measured widget heights plus continuous lower- and right-edge drag resizing without overlap
 - Responsive full-screen pages with keyboard-friendly controls
 
 ## Quick start
@@ -76,9 +76,10 @@ TANG subscribes to six major energy-shipping corridors rather than the entire gl
 
 ## Using the terminal
 
-- Select **EDIT LAYOUT** to reveal move, width, remove, and lower-edge resize controls.
-- Drag a panel by its `⠿` grip to reorder it. Drag its dotted lower edge for continuous vertical sizing.
-- Select **↔ SIZE** to cycle among compact, medium, and full width. Select the height label to restore content-measured **AUTO** height.
+- Select **EDIT LAYOUT** to reveal move, resize, and remove controls.
+- Drag a panel by its `⠿` grip to reorder it. Drag its dotted lower edge for continuous height or its highlighted right edge for continuous width.
+- The width control shows the current column span, such as `↔ 7/12`; select it to cycle through 4-, 6-, and 12-column presets. Select the height label to restore content-measured **AUTO** height.
+- Exact desktop width and height choices persist independently for every page. At narrow breakpoints TANG temporarily expands panels for readability without discarding the desktop setting.
 - Select **RESET** to restore the current page's factory arrangement.
 - Select **DATA: DEMO/LIVE** to switch adapters. Live mode requires the local launcher and internet access.
 - Select **FULLSCREEN** to enter a borderless browser canvas. Move the browser window to the desired display first, then enter fullscreen. Browser security requires this user gesture.
@@ -125,7 +126,7 @@ terminal/
 
 The browser code deliberately uses classic scripts so `index.html` works from `file://` without module/CORS errors in modern browsers. There are no runtime dependencies to install and no remote UI assets.
 
-The product benchmark is documented in [docs/BLOOMBERG-BENCHMARK.md](docs/BLOOMBERG-BENCHMARK.md). Internal boundaries and feed semantics are described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DATA-PROVENANCE.md](docs/DATA-PROVENANCE.md).
+The durable product direction is captured in [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md). The product benchmark is documented in [docs/BLOOMBERG-BENCHMARK.md](docs/BLOOMBERG-BENCHMARK.md). Internal boundaries and feed semantics are described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DATA-PROVENANCE.md](docs/DATA-PROVENANCE.md).
 
 ## Reliability and privacy
 

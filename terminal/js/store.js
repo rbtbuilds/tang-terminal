@@ -89,7 +89,8 @@
       return {
         id: entry.id,
         size: entry.size,
-        heightPx: Number.isFinite(Number(entry.heightPx)) ? Number(entry.heightPx) : null
+        widthCols: entry.widthCols != null && entry.widthCols !== "" && Number.isFinite(Number(entry.widthCols)) ? Math.max(3, Math.min(12, Math.round(Number(entry.widthCols)))) : null,
+        heightPx: entry.heightPx != null && entry.heightPx !== "" && Number.isFinite(Number(entry.heightPx)) ? Number(entry.heightPx) : null
       };
     });
   }
