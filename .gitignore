@@ -7,3 +7,7 @@ __pycache__/
 
 # Generated release archives
 dist/
+
+# Local credentials (included only in explicitly requested private release ZIPs)
+terminal/.tang-terminal.env
+terminal/config.local.json

@@ -16,31 +16,39 @@
 
   /** Default widget layout: order + size for every known widget id. */
   var DEFAULT_LAYOUT = [
-    { id: "clocks",    size: "lg" },
-    { id: "indices",   size: "md" },
-    { id: "heatmap",   size: "md" },
-    { id: "stocks",    size: "md" },
-    { id: "watchlist", size: "sm" },
-    { id: "metals",    size: "sm" },
-    { id: "assistant", size: "lg" }
+    { id: "clocks", size: "lg" },
+    { id: "indices", size: "md" },
+    { id: "heatmap", size: "md" },
+    { id: "stocks", size: "md" },
+    { id: "metals", size: "md" }
   ];
 
   var WORKSPACES = [
+    { id: "overview", label: "OVERVIEW" },
     { id: "markets", label: "MARKETS" },
     { id: "energy", label: "ENERGY & COMMODITIES" },
+    { id: "shipping", label: "SHIPPING MAP" },
     { id: "research", label: "RESEARCH" }
   ];
 
   var DEFAULT_LAYOUTS = {
-    markets: DEFAULT_LAYOUT,
+    overview: DEFAULT_LAYOUT,
+    markets: [
+      { id: "indices", size: "md" }, { id: "heatmap", size: "md" },
+      { id: "stocks", size: "lg" }, { id: "metals", size: "sm" },
+      { id: "macro", size: "md" }, { id: "watchlist", size: "sm" }
+    ],
     energy: [
       { id: "energy", size: "md" }, { id: "commodities", size: "md" },
-      { id: "tankers", size: "md" }, { id: "macro", size: "md" },
-      { id: "watchlist", size: "md" }, { id: "assistant", size: "lg" }
+      { id: "tankers", size: "md" }, { id: "macro", size: "md" }
+    ],
+    shipping: [
+      { id: "shipping", size: "lg" },
+      { id: "tankers", size: "md" }, { id: "energy", size: "md" }
     ],
     research: [
-      { id: "watchlist", size: "md" }, { id: "macro", size: "md" },
-      { id: "indices", size: "md" }, { id: "assistant", size: "lg" }
+      { id: "watchlist", size: "sm" }, { id: "macro", size: "sm" },
+      { id: "indices", size: "sm" }, { id: "assistant", size: "lg" }
     ]
   };
 
@@ -75,7 +83,13 @@
   }
 
   function copyLayout(layout) {
-    return layout.map(function (entry) { return { id: entry.id, size: entry.size, height: entry.height || "auto" }; });
+    return layout.map(function (entry) {
+      return {
+        id: entry.id,
+        size: entry.size,
+        heightPx: Number.isFinite(Number(entry.heightPx)) ? Number(entry.heightPx) : null
+      };
+    });
   }
 
   function workspaceState() {
@@ -83,10 +97,12 @@
     if (saved && saved.layouts && saved.active) return saved;
     var legacy = readJSON(LAYOUT_KEY, null);
     return {
-      active: "markets",
+      active: "overview",
       layouts: {
-        markets: Array.isArray(legacy) && legacy.length ? legacy : copyLayout(DEFAULT_LAYOUTS.markets),
+        overview: Array.isArray(legacy) && legacy.length ? legacy : copyLayout(DEFAULT_LAYOUTS.overview),
+        markets: copyLayout(DEFAULT_LAYOUTS.markets),
         energy: copyLayout(DEFAULT_LAYOUTS.energy),
+        shipping: copyLayout(DEFAULT_LAYOUTS.shipping),
         research: copyLayout(DEFAULT_LAYOUTS.research)
       }
     };
@@ -96,7 +112,7 @@
     /** Returns the current workspace layout, migrating the original layout once. */
     getLayout: function () {
       var state = workspaceState();
-      return copyLayout(state.layouts[state.active] || DEFAULT_LAYOUTS.markets);
+      return copyLayout(state.layouts[state.active] || DEFAULT_LAYOUTS[state.active] || DEFAULT_LAYOUTS.overview);
     },
 
     saveLayout: function (layout) {
@@ -104,7 +120,7 @@
     },
 
     resetLayout: function () {
-      var state = workspaceState(); state.layouts[state.active] = copyLayout(DEFAULT_LAYOUTS[state.active] || DEFAULT_LAYOUTS.markets); writeJSON(WORKSPACES_KEY, state); return copyLayout(state.layouts[state.active]);
+      var state = workspaceState(); state.layouts[state.active] = copyLayout(DEFAULT_LAYOUTS[state.active] || DEFAULT_LAYOUTS.overview); writeJSON(WORKSPACES_KEY, state); return copyLayout(state.layouts[state.active]);
     },
 
     getWorkspaces: function () { return WORKSPACES.slice(); },

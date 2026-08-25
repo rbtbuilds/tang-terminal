@@ -34,7 +34,8 @@
       var change = seededChange(item.sym);
       this.rows[item.sym] = {
         sym: item.sym, price: item.base * (1 + change / 100), change: change,
-        digits: item.digits || 2, source: "SIM"
+        digits: item.digits || 2, source: "SIMULATED — NOT MARKET DATA",
+        timestamp: Math.floor(Date.now() / 1000), retrievedAt: Math.floor(Date.now() / 1000), delayMinutes: null
       };
     }, this);
   }
@@ -48,6 +49,7 @@
         var drift = (Math.random() - 0.49) * 0.045;
         row.price = Math.max(0.001, row.price * (1 + drift / 100));
         row.change += drift;
+        row.timestamp = Math.floor(Date.now() / 1000); row.retrievedAt = row.timestamp;
       });
       self.onData(self.rows);
     }, 2200);
@@ -74,13 +76,16 @@
             self.rows[item.sym] = {
               sym: item.sym, price: q.price, change: Number(q.change) || 0,
               digits: item.digits || 2, source: "YAHOO FINANCE",
-              timestamp: Number(q.timestamp) || 0, exchange: q.exchange || ""
+              timestamp: Number(q.timestamp) || 0, retrievedAt: Number(payload.retrievedAt) || 0,
+              exchange: q.exchange || "", currency: q.currency || "",
+              delayMinutes: Number.isFinite(Number(q.delayMinutes)) ? Number(q.delayMinutes) : null
             };
           }
         });
         if (!Object.keys(self.rows).length) throw new Error("No live quotes available");
         var stamp = payload.retrievedAt ? new Date(payload.retrievedAt * 1000).toISOString().slice(11, 19) : "NOW";
-        self.onStatus("ok", "LIVE · " + stamp + " UTC · " + Object.keys(self.rows).length);
+        var delayed = Object.keys(self.rows).filter(function (symbol) { return Number(self.rows[symbol].delayMinutes) > 0; }).length;
+        self.onStatus("ok", "CONNECTED · " + stamp + " UTC · " + Object.keys(self.rows).length + (delayed ? " · " + delayed + " DELAYED" : ""));
         self.onData(self.rows);
       })
       .catch(function () {

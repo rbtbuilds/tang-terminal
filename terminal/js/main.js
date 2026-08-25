@@ -8,6 +8,14 @@
   var aiPill = document.getElementById("ollama-pill");
   var symbolOverlay = document.getElementById("symbol-overlay");
   var widgetOverlay = document.getElementById("widget-overlay");
+  var layoutEditing = false;
+  var pageCopy = {
+    overview: ["GLOBAL OVERVIEW", "Market monitor", "LINKED QUOTES · NEWS · TECHNICALS"],
+    markets: ["CROSS-ASSET MARKETS", "Indices, sectors and leaders", "SELECT A SYMBOL TO OPEN RESEARCH"],
+    energy: ["ENERGY DESK", "Energy and commodity complex", "CURVES · SPREADS · EQUITIES · MACRO"],
+    shipping: ["SHIPPING INTELLIGENCE", "Vessel flows and tanker markets", "AIS CORRIDORS · PORTS · ENERGY ROUTES"],
+    research: ["RESEARCH WORKSPACE", "Evidence-led market analysis", "WATCHLIST · EVENTS · LOCAL AI"]
+  };
   var widgetCatalog = [
     { id: "clocks", title: "World Session Clocks", description: "Eight global trading sessions", size: "lg" },
     { id: "indices", title: "Global Indices", description: "Major US, European and Asian benchmarks", size: "md" },
@@ -19,6 +27,7 @@
     { id: "commodities", title: "Commodity Matrix", description: "Energy, metals, agriculture and livestock", size: "md" },
     { id: "tankers", title: "Tanker Equities", description: "Crude and product tanker operators", size: "md" },
     { id: "macro", title: "Cross-asset Signals", description: "Volatility, USD, yields, FX and crypto", size: "md" },
+    { id: "shipping", title: "Global Shipping Map", description: "Local world map with optional live AIS vessel positions", size: "lg" },
     { id: "assistant", title: "Local AI Assistant", description: "Ollama-powered market research", size: "lg" }
   ];
 
@@ -32,9 +41,24 @@
     }).join("");
   }
 
+  function renderWatchRail() {
+    var symbols = TT.watchlist.get();
+    var list = document.getElementById("watch-rail-list");
+    if (!symbols.length) {
+      list.innerHTML = '<button class="rail-empty" id="rail-empty-add">NO SYMBOLS<br><span>+ ADD TICKER</span></button>';
+      return;
+    }
+    list.innerHTML = symbols.map(function (symbol) {
+      var item = TT.universe.index[symbol] || { name: symbol, digits: 2 };
+      var quote = quotes[symbol];
+      return '<button class="rail-quote quote-action" data-symbol="' + TT.widgets.escapeHTML(symbol) + '"><span><strong>' + TT.widgets.escapeHTML(symbol) + '</strong><small>' + TT.widgets.escapeHTML(item.name) + '</small></span><span class="' + (quote ? TT.widgets.valueClass(quote.change) : "faint") + '">' + (quote ? (quote.change >= 0 ? "+" : "") + quote.change.toFixed(2) + "%" : "—") + '</span></button>';
+    }).join("");
+  }
+
   function renderQuotes() {
     Object.keys(panels).forEach(function (id) { if (panels[id] && panels[id].update) panels[id].update(quotes); });
-    renderTicker();
+    renderTicker(); renderWatchRail();
+    window.requestAnimationFrame(function () { TT.grid.refresh(canvas); });
   }
 
   function onData(next) { Object.keys(next).forEach(function (key) { quotes[key] = next[key]; }); renderQuotes(); }
@@ -52,18 +76,24 @@
     Object.keys(panels).forEach(function (id) {
       if (panels[id]._timer) window.clearInterval(panels[id]._timer);
       if (panels[id]._unsubscribe) panels[id]._unsubscribe();
+      if (panels[id]._observer) panels[id]._observer.disconnect();
     });
   }
 
   function renderWorkspaceTabs() {
     var active = TT.store.getActiveWorkspace(); var tabs = document.getElementById("workspace-tabs"); tabs.innerHTML = "";
     TT.store.getWorkspaces().forEach(function (workspace) {
-      var button = document.createElement("button"); button.className = "workspace-tab" + (workspace.id === active ? " active" : ""); button.textContent = workspace.label; button.addEventListener("click", function () { if (workspace.id !== TT.store.getActiveWorkspace()) { TT.store.setActiveWorkspace(workspace.id); mountWorkspace(); } }); tabs.appendChild(button);
+      var button = document.createElement("button"); button.className = "workspace-tab" + (workspace.id === active ? " active" : ""); button.textContent = workspace.label; button.addEventListener("click", function () { if (workspace.id !== TT.store.getActiveWorkspace()) { TT.store.setActiveWorkspace(workspace.id); window.location.hash = workspace.id; mountWorkspace(); } }); tabs.appendChild(button);
     });
   }
 
   function mountWorkspace() {
     disposePanels(); panels = {}; TT.grid.mount(canvas, TT.store.getLayout(), renderWidget); renderQuotes(); renderWorkspaceTabs();
+    var active = TT.store.getActiveWorkspace(); var copy = pageCopy[active] || pageCopy.overview;
+    document.getElementById("page-kicker").textContent = copy[0];
+    document.getElementById("page-title").textContent = copy[1];
+    document.getElementById("page-meta").textContent = copy[2];
+    TT.grid.setEditing(canvas, layoutEditing);
   }
 
   function applyFontScale(next) {
@@ -71,11 +101,13 @@
     document.documentElement.style.setProperty("--font-scale", settings.fontScale);
     document.getElementById("font-scale").textContent = Math.round(settings.fontScale * 100) + "%";
     TT.store.saveSettings(settings);
+    window.requestAnimationFrame(function () { TT.grid.refresh(canvas); });
   }
 
   function closeModal(overlay) { overlay.hidden = true; }
-  function openSymbolSearch() {
+  function openSymbolSearch(prefill) {
     symbolOverlay.hidden = false; document.getElementById("symbol-results").innerHTML = "";
+    if (prefill) document.getElementById("symbol-search-input").value = prefill;
     window.setTimeout(function () { document.getElementById("symbol-search-input").focus(); }, 0);
   }
 
@@ -114,23 +146,41 @@
     refreshData: startAdapter,
     marketSnapshot: function () {
       var timestamps = Object.keys(quotes).map(function (symbol) { return quotes[symbol].timestamp || 0; }); var latest = Math.max.apply(Math, timestamps.concat([0]));
-      return "Mode: " + settings.dataMode.toUpperCase() + "\nProvider: " + (settings.dataMode === "live" ? "Yahoo Finance; exchange-dependent real-time/delayed quotes" : "local simulation; not market data") + "\nSnapshot time: " + (latest ? new Date(latest * 1000).toISOString() : new Date().toISOString()) + "\nCoverage limits: No fund flows or live freight rates. Commodity values are front-month futures proxies.\n" + Object.keys(quotes).map(function (symbol) { var quote = quotes[symbol]; var instrument = TT.universe.index[symbol] || { name: symbol }; return symbol + " (" + instrument.name + ") " + quote.price.toFixed(quote.digits) + " " + (quote.change >= 0 ? "+" : "") + quote.change.toFixed(2) + "%"; }).join("\n");
+      return "Mode: " + settings.dataMode.toUpperCase() + "\nProvider: " + (settings.dataMode === "live" ? "Yahoo Finance; exchange-dependent real-time or delayed indications" : "local simulation; not market data") + "\nLatest observation: " + (latest ? new Date(latest * 1000).toISOString() : new Date().toISOString()) + "\nCoverage limits: No fund flows, positions, options flow, analyst consensus, or live freight rates. Commodity values are front-month futures proxies.\n" + Object.keys(quotes).map(function (symbol) { var quote = quotes[symbol]; var instrument = TT.universe.index[symbol] || { name: symbol }; var delay = quote.delayMinutes == null ? "delay unknown" : quote.delayMinutes ? quote.delayMinutes + "m delayed" : "real-time indicated"; return symbol + " (" + instrument.name + ") " + quote.price.toFixed(quote.digits) + " " + (quote.change >= 0 ? "+" : "") + quote.change.toFixed(2) + "% | " + delay + " | observed " + (quote.timestamp ? new Date(quote.timestamp * 1000).toISOString() : "unknown"); }).join("\n");
     }
   };
 
+  var initialWorkspace = window.location.hash.slice(1);
+  if (pageCopy[initialWorkspace]) TT.store.setActiveWorkspace(initialWorkspace);
   applyFontScale(Number(settings.fontScale) || 1); mountWorkspace(); startAdapter();
   document.getElementById("btn-toggle-mode").addEventListener("click", function () { settings.dataMode = settings.dataMode === "demo" ? "live" : "demo"; TT.store.saveSettings(settings); startAdapter(); });
   document.getElementById("btn-reset-layout").addEventListener("click", function () { if (window.confirm("Restore this workspace's default panels?")) { TT.store.resetLayout(); mountWorkspace(); } });
   document.getElementById("btn-fullscreen").addEventListener("click", function () { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(function () {}); else document.exitFullscreen().catch(function () {}); });
   document.getElementById("btn-font-down").addEventListener("click", function () { applyFontScale(settings.fontScale - 0.1); });
   document.getElementById("btn-font-up").addEventListener("click", function () { applyFontScale(settings.fontScale + 0.1); });
-  document.getElementById("btn-add-symbol").addEventListener("click", openSymbolSearch);
+  document.getElementById("btn-add-symbol").addEventListener("click", function () { openSymbolSearch(); });
+  document.getElementById("rail-add-symbol").addEventListener("click", function () { openSymbolSearch(); });
+  document.getElementById("watch-rail-list").addEventListener("click", function (event) { if (event.target.closest("#rail-empty-add")) openSymbolSearch(); });
+  document.getElementById("btn-edit-layout").addEventListener("click", function (event) {
+    layoutEditing = !layoutEditing; TT.grid.setEditing(canvas, layoutEditing);
+    event.currentTarget.setAttribute("aria-pressed", String(layoutEditing));
+    event.currentTarget.textContent = layoutEditing ? "DONE" : "EDIT LAYOUT";
+  });
   document.getElementById("btn-add-widget").addEventListener("click", function () { renderWidgetPicker(); widgetOverlay.hidden = false; });
   document.getElementById("symbol-search-form").addEventListener("submit", function (event) {
     event.preventDefault(); var query = document.getElementById("symbol-search-input").value.trim(); var results = document.getElementById("symbol-results"); if (!query) return;
     if (window.location.protocol === "file:") { results.innerHTML = '<div class="detail-error">Global search requires the local launcher.</div>'; return; }
     results.innerHTML = '<div class="detail-loading"><span class="loader"></span> SEARCHING GLOBAL MARKETS</div>';
     window.fetch("/api/search?q=" + encodeURIComponent(query), { cache: "no-store" }).then(function (response) { if (!response.ok) throw new Error("Search unavailable"); return response.json(); }).then(function (payload) { renderSymbolResults(payload.results || []); }).catch(function (error) { results.innerHTML = '<div class="detail-error">' + error.message + '</div>'; });
+  });
+  document.getElementById("command-form").addEventListener("submit", function (event) {
+    event.preventDefault();
+    var input = document.getElementById("command-input"); var query = input.value.trim(); var upper = query.toUpperCase();
+    var workspaceAliases = { OVERVIEW: "overview", MARKETS: "markets", ENERGY: "energy", COMMODITIES: "energy", SHIPPING: "shipping", MAP: "shipping", RESEARCH: "research", AI: "research" };
+    if (workspaceAliases[upper]) { TT.store.setActiveWorkspace(workspaceAliases[upper]); window.location.hash = workspaceAliases[upper]; mountWorkspace(); input.value = ""; return; }
+    var symbol = upper.split(/\s+/)[0];
+    if (TT.universe.index[symbol]) { TT.details.open(symbol); input.value = ""; return; }
+    openSymbolSearch(query); input.value = "";
   });
   document.querySelectorAll(".modal-close").forEach(function (button) { button.addEventListener("click", function () { closeModal(button.closest(".modal-overlay")); }); });
   [symbolOverlay, widgetOverlay].forEach(function (overlay) { overlay.addEventListener("click", function (event) { if (event.target === overlay) closeModal(overlay); }); });

@@ -6,6 +6,12 @@ PORT=8787
 URL="http://127.0.0.1:${PORT}"
 LOG_FILE="${TMPDIR:-/tmp}/tang-terminal.log"
 
+if [[ -f "${SCRIPT_DIR}/.tang-terminal.env" ]]; then
+  set -a
+  source "${SCRIPT_DIR}/.tang-terminal.env"
+  set +a
+fi
+
 if ! curl --silent --fail "${URL}/index.html" >/dev/null 2>&1; then
   /usr/bin/env python3 "${SCRIPT_DIR}/local-server.py" --port "${PORT}" >"${LOG_FILE}" 2>&1 &
   SERVER_PID=$!

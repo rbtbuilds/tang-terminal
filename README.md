@@ -1,6 +1,6 @@
 # TANG Terminal
 
-TANG Terminal is a compact, terminal-style global market canvas. It runs with no package manager, framework, CDN, analytics, or cloud account. Panels can be dragged, resized, and restored; the arrangement persists in `localStorage`.
+TANG Terminal is a compact, terminal-style global market workstation. It runs with no package manager, framework, CDN, analytics, or cloud account. Purpose-built pages replace the former continuous dashboard, while collision-free panel layouts persist in `localStorage`.
 
 ## Dashboard
 
@@ -13,10 +13,13 @@ TANG Terminal is a compact, terminal-style global market canvas. It runs with no
 - Click-through instrument research with seven chart ranges, calculated technicals, educational bull/bear scenarios, and recent headlines
 - Persistent watchlist panel; pin or unpin an instrument from its research drawer
 - Global security search for provider-supported LSE, NYSE, Nasdaq and other exchange-listed instruments
-- Three persistent workspaces: Markets, Energy & Commodities, and Research
+- Five routed workspaces: Overview, Markets, Energy & Commodities, Shipping Map, and Research
+- Persistent left-side watchlist and global ticker/function command field
+- Local Natural Earth world map with live AISStream energy-corridor positions and an offline demo fallback
 - Add/remove widget catalog with dedicated energy, broad commodities, tanker-equity and cross-asset panels
 - Adjustable 85–145% terminal typography with the preference stored locally
-- Responsive full-screen canvas with keyboard-friendly controls
+- Content-measured widget heights and continuous lower-edge drag resizing without overlap
+- Responsive full-screen pages with keyboard-friendly controls
 
 ## Quick start
 
@@ -57,17 +60,29 @@ By default the launcher bridges to `http://127.0.0.1:11434`. To use another endp
 
 The assistant receives the current visible quote snapshot with each prompt. It is designed for market commentary, not order execution. Its output is not financial advice.
 
+## Live shipping map
+
+Live vessel positions use AISStream through the bundled local server. The key is never returned to browser code.
+
+1. Create an AISStream API key.
+2. Copy `terminal/.tang-terminal.env.example` to `terminal/.tang-terminal.env`.
+3. Replace the placeholder with your key and launch normally.
+
+The real configuration file is ignored by Git. If it is included in a private release ZIP, that archive becomes sensitive and must not be published or forwarded. Rotate the key if the archive is lost.
+
+TANG subscribes to six major energy-shipping corridors rather than the entire global firehose. AIS reception is terrestrial and event-driven; coverage, classification and update frequency vary. Targets expire from the display after 30 minutes. Unclassified targets are shown in blue; confirmed tanker-class AIS types are amber.
+
 ## Using the terminal
 
-- Drag a panel by its `⠿` grip to reorder it.
-- Select **↔ SIZE** to cycle among compact, medium, and full width.
-- Select **↕ AUTO / TALL / MAX** to expand a widget vertically. Tall and maximum modes release internal vertical scrolling so content continues down the dashboard.
-- Select **RESET LAYOUT** to restore the factory arrangement.
+- Select **EDIT LAYOUT** to reveal move, width, remove, and lower-edge resize controls.
+- Drag a panel by its `⠿` grip to reorder it. Drag its dotted lower edge for continuous vertical sizing.
+- Select **↔ SIZE** to cycle among compact, medium, and full width. Select the height label to restore content-measured **AUTO** height.
+- Select **RESET** to restore the current page's factory arrangement.
 - Select **DATA: DEMO/LIVE** to switch adapters. Live mode requires the local launcher and internet access.
 - Select **FULLSCREEN** to enter a borderless browser canvas. Move the browser window to the desired display first, then enter fullscreen. Browser security requires this user gesture.
 - Open an instrument and select **+ WATCHLIST** to pin it to the persistent watchlist panel. Select **★ WATCHING** or the row's × button to remove it.
 - Select **+ TICKER**, search by company or provider ticker, confirm the exchange, and add the result. London listings normally use the `.L` suffix (for example `BP.L`). Custom instruments persist locally and receive the same chart, technical and news drawer.
-- Switch between **MARKETS**, **ENERGY & COMMODITIES**, and **RESEARCH** workspaces. Each has an independent persistent layout.
+- Switch among **OVERVIEW**, **MARKETS**, **ENERGY & COMMODITIES**, **SHIPPING MAP**, and **RESEARCH**. Each has an independent persistent layout and URL hash.
 - Select **+ WIDGET** to add panels to the current workspace. Use a panel's × control to remove it without deleting its data.
 - Use **A−** and **A+** to scale terminal typography between 85% and 145%.
 
@@ -77,7 +92,7 @@ Layout and preferences are stored only in the browser's `localStorage`. Differen
 
 `DemoAdapter` is deterministic at startup and applies small simulated ticks every 2.2 seconds. It is always available offline and labels its feed as simulated.
 
-`LiveAdapter` requests public chart-market data from Yahoo Finance through the bundled local server once per minute. Dashboard quotes are retrieved in batches—rather than one upstream request per instrument—to keep startup and workspace switching responsive. Intraday percentage changes use the provider's previous close rather than the first bar in a multi-day range. Every research drawer shows the provider, exchange, and market timestamp. Quotes may be delayed according to exchange/provider rules. Availability and symbol coverage depend on the upstream service; a failed request is shown as unavailable and does not break the dashboard. Market-cap values are illustrative reference values, not live quotes. Commodity panels use front-month exchange-traded futures proxies; tanker panels show listed operator equities rather than freight rates.
+`LiveAdapter` requests public chart-market data from Yahoo Finance through the bundled local server once per minute. Dashboard quotes are retrieved in batches—rather than one upstream request per instrument—to keep startup and page switching responsive. Intraday percentage changes use the provider's previous close rather than the first bar in a multi-day range. Research views distinguish observation and retrieval times, currency, exchange, provider and documented delay. For example, Yahoo documents LSE data as 20 minutes delayed and many NYMEX/COMEX futures as 30 minutes delayed; TANG preserves those labels instead of describing the whole connection as real-time. Availability and symbol coverage depend on the upstream service; a failed request is shown as unavailable and does not break the dashboard. Market-cap values are illustrative reference values, not live quotes. Commodity panels use front-month exchange-traded futures proxies; tanker panels show listed operator equities rather than freight rates.
 
 The technical signal is calculated locally from the selected range using SMA20, SMA50, RSI14, ATR14, and recent support/resistance. Bull and bear scenarios are mechanical educational examples—not individualized recommendations or executable orders. News headlines are fetched on demand and link to the original publisher through Yahoo Finance search.
 
@@ -87,27 +102,28 @@ The technical signal is calculated locally from the selected range using SMA20, 
 terminal/
   index.html              Application shell and local script order
   css/terminal.css        Tokens, layout, components, responsive rules
+  data/world-110m.geojson Packaged Natural Earth public-domain basemap
   js/store.js             Versioned local settings/layout persistence
   js/symbols.js           Persistent user-added security registry
   js/data/                Instrument universe and data adapters
   js/widgets/             Isolated panel renderers
-  js/grid.js              Drag/drop and panel sizing
+  js/grid.js              Collision-free auto layout and pointer resizing
   js/ollama.js            Local model client
   js/main.js              Application orchestration
-  local-server.py         Static server, live feed, and Ollama bridges
+  local-server.py         Static, market, AISStream, and Ollama bridges
   install-* / launch-*    Desktop installers and launchers
 ```
 
 The browser code deliberately uses classic scripts so `index.html` works from `file://` without module/CORS errors in modern browsers. There are no runtime dependencies to install and no remote UI assets.
 
-The product benchmark and phased roadmap are documented in [docs/BLOOMBERG-BENCHMARK.md](docs/BLOOMBERG-BENCHMARK.md).
+The product benchmark is documented in [docs/BLOOMBERG-BENCHMARK.md](docs/BLOOMBERG-BENCHMARK.md). Internal boundaries and feed semantics are described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DATA-PROVENANCE.md](docs/DATA-PROVENANCE.md).
 
 ## Reliability and privacy
 
 - Storage access, fullscreen requests, network calls, and model calls fail gracefully.
 - User prompts are sent only to the configured local Ollama endpoint.
 - The local server binds to `127.0.0.1`, not the network.
-- No credentials are stored or requested.
+- Market and AIS credentials remain in the ignored server-only `.tang-terminal.env`; endpoints never return them.
 - The demo experience works entirely offline.
 
 ## Development checks

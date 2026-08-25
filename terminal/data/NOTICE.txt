@@ -1,0 +1,10 @@
+World basemap
+=============
+
+Dataset: Natural Earth, 1:110m Admin 0 Countries
+Source: https://www.naturalearthdata.com/
+Repository: https://github.com/nvkelso/natural-earth-vector
+License: Public domain
+
+The packaged GeoJSON is used only as local geographic context. Indicative
+shipping-route lines are TANG visual references, not reported vessel tracks.

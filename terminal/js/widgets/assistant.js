@@ -8,8 +8,9 @@
       host.value = settings.ollama.host;
       function add(who, text, kind) { var div = document.createElement("div"); div.className = "msg " + kind; var label = document.createElement("span"); label.className = "who"; label.textContent = who; var message = document.createElement("div"); message.className = "msg-content"; message.textContent = text; div.appendChild(label); div.appendChild(message); log.appendChild(div); log.scrollTop = log.scrollHeight; return message; }
       function addInline(target, text) {
-        text.split(/(\*\*[^*]+\*\*)/).forEach(function (part) {
+        text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/).forEach(function (part) {
           if (part.slice(0, 2) === "**" && part.slice(-2) === "**") { var strong = document.createElement("strong"); strong.textContent = part.slice(2, -2); target.appendChild(strong); }
+          else if (part.charAt(0) === "*" && part.slice(-1) === "*") { var emphasis = document.createElement("em"); emphasis.textContent = part.slice(1, -1); target.appendChild(emphasis); }
           else target.appendChild(document.createTextNode(part));
         });
       }

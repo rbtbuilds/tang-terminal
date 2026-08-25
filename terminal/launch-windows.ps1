@@ -2,6 +2,14 @@ param([int]$Port = 8787)
 $ErrorActionPreference = "Stop"
 $Project = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Url = "http://127.0.0.1:$Port"
+$EnvFile = Join-Path $Project ".tang-terminal.env"
+if (Test-Path $EnvFile) {
+  Get-Content $EnvFile | ForEach-Object {
+    if ($_ -match '^\s*([^#][^=]*)=(.*)$') {
+      [Environment]::SetEnvironmentVariable($Matches[1].Trim(), $Matches[2].Trim(), "Process")
+    }
+  }
+}
 
 try { Invoke-WebRequest -UseBasicParsing "$Url/index.html" -TimeoutSec 1 | Out-Null }
 catch {

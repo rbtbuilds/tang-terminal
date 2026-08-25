@@ -16,10 +16,16 @@
   <header id="titlebar" class="titlebar">
     <div class="titlebar-left">
       <span class="logo">▮▮ TANG TERMINAL</span>
-      <span class="version" id="app-version">v2.1.0</span>
+      <span class="version" id="app-version">v3.0.0</span>
     </div>
 
-    <div class="titlebar-center">
+    <form id="command-form" class="command-form" role="search">
+      <span class="command-prefix">⌘</span>
+      <input id="command-input" aria-label="Search a security or function" autocomplete="off" placeholder="Search ticker or command · NVDA · BP.L · SHIPPING" />
+      <span class="command-hint">ENTER</span>
+    </form>
+
+    <div class="titlebar-center status-cluster">
       <span class="status-pill" id="data-mode-pill" title="Active data adapter">MODE: DEMO</span>
       <span class="status-pill" id="feed-status-pill" title="Feed health">FEED: —</span>
       <span class="status-pill" id="ollama-pill" title="Ollama assistant status">AI: OFFLINE</span>
@@ -27,7 +33,6 @@
 
     <div class="titlebar-right">
       <button class="tb-btn" id="btn-toggle-mode"  title="Switch data adapter (demo / live)">DATA: DEMO</button>
-      <button class="tb-btn" id="btn-reset-layout" title="Restore default widget layout">RESET LAYOUT</button>
       <button class="tb-btn" id="btn-fullscreen"   title="Toggle borderless fullscreen (F11 also works)">⛶ FULLSCREEN</button>
       <span class="utc-clock" id="utc-clock" title="Coordinated Universal Time">--:--:-- UTC</span>
     </div>
@@ -38,16 +43,28 @@
     <div class="workspace-tools">
       <button class="tb-btn primary" id="btn-add-symbol">+ TICKER</button>
       <button class="tb-btn" id="btn-add-widget">+ WIDGET</button>
+      <button class="tb-btn" id="btn-edit-layout" aria-pressed="false">EDIT LAYOUT</button>
+      <button class="tb-btn" id="btn-reset-layout" title="Restore default widget layout">RESET</button>
       <button class="tb-btn font-btn" id="btn-font-down" aria-label="Decrease font size">A−</button>
       <span id="font-scale" class="font-scale">100%</span>
       <button class="tb-btn font-btn" id="btn-font-up" aria-label="Increase font size">A+</button>
     </div>
   </nav>
 
-  <!-- ======================= Widget canvas ======================= -->
-  <main id="canvas" class="canvas" aria-label="Market dashboard canvas">
-    <!-- Widget panels are rendered here by js/main.js via the grid engine. -->
-  </main>
+  <div class="terminal-workarea">
+    <aside class="watch-rail" aria-label="Persistent watchlist">
+      <header><span>WATCHLIST</span><button id="rail-add-symbol" aria-label="Add a ticker">+</button></header>
+      <div id="watch-rail-list" class="watch-rail-list"></div>
+      <div class="rail-hint">Click any symbol for research</div>
+    </aside>
+    <section class="page-stage">
+      <header class="page-context">
+        <div><span class="page-kicker" id="page-kicker">GLOBAL OVERVIEW</span><strong id="page-title">Market monitor</strong></div>
+        <div class="page-meta" id="page-meta">LINKED QUOTES · NEWS · TECHNICALS</div>
+      </header>
+      <main id="canvas" class="canvas" aria-label="Market dashboard canvas"></main>
+    </section>
+  </div>
 
   <!-- ======================= Bottom ticker ======================= -->
   <footer id="tickerbar" class="tickerbar" aria-label="Scrolling market ticker">
@@ -99,6 +116,7 @@
   <script src="js/widgets/watchlist.js"></script>
   <script src="js/widgets/metals.js"></script>
   <script src="js/widgets/markets.js"></script>
+  <script src="js/widgets/shipping.js"></script>
   <script src="js/ollama.js"></script>
   <script src="js/widgets/assistant.js"></script>
   <script src="js/details.js"></script>

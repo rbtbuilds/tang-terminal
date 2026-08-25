@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import json
 import mimetypes
 import os
 import pathlib
+import secrets
+import socket
+import ssl
+import struct
 import time
 import threading
 import urllib.error
@@ -16,13 +22,216 @@ from concurrent.futures import ThreadPoolExecutor
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = pathlib.Path(__file__).resolve().parent
+
+
+def load_local_environment() -> None:
+    """Load ignored local credentials without exposing them to the browser."""
+    path = ROOT / ".tang-terminal.env"
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line or line.lstrip().startswith("#") or "=" not in line:
+            continue
+        name, value = line.split("=", 1)
+        os.environ.setdefault(name.strip(), value.strip())
+
+
+load_local_environment()
 OLLAMA = os.environ.get("TANG_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
+AIS_KEY = os.environ.get("TANG_AISSTREAM_API_KEY", "").strip()
 RANGE_INTERVALS = {
     "1d": "5m", "5d": "15m", "1mo": "1h", "3mo": "1d",
     "6mo": "1d", "1y": "1d", "5y": "1wk",
 }
 QUOTE_CACHE: dict[str, tuple[float, dict[str, dict]]] = {}
 QUOTE_CACHE_LOCK = threading.Lock()
+
+# Busy global streams are intentionally narrowed to the major energy corridors.
+AIS_CORRIDORS = [
+    [[30.5, 48.0], [22.0, 60.5]],       # Strait of Hormuz / Gulf
+    [[31.8, 31.0], [27.5, 34.8]],       # Suez / eastern Mediterranean
+    [[7.0, 99.0], [-1.5, 106.5]],       # Singapore / Malacca
+    [[53.0, -7.0], [47.0, 4.0]],        # English Channel
+    [[31.0, -98.0], [17.0, -80.0]],     # Gulf of Mexico / Caribbean
+    [[-30.0, 14.0], [-36.5, 22.0]],     # Cape of Good Hope
+]
+
+
+def websocket_frame(payload: bytes, opcode: int = 1) -> bytes:
+    """Encode a masked client WebSocket frame (RFC 6455)."""
+    mask = secrets.token_bytes(4)
+    length = len(payload)
+    header = bytes([0x80 | opcode])
+    if length < 126:
+        header += bytes([0x80 | length])
+    elif length < 65536:
+        header += bytes([0x80 | 126]) + struct.pack("!H", length)
+    else:
+        header += bytes([0x80 | 127]) + struct.pack("!Q", length)
+    masked = bytes(value ^ mask[index % 4] for index, value in enumerate(payload))
+    return header + mask + masked
+
+
+def recv_exact(connection: socket.socket, length: int) -> bytes:
+    data = bytearray()
+    while len(data) < length:
+        chunk = connection.recv(length - len(data))
+        if not chunk:
+            raise ConnectionError("AIS stream closed")
+        data.extend(chunk)
+    return bytes(data)
+
+
+def websocket_message(connection: socket.socket) -> tuple[int, bytes]:
+    first, second = recv_exact(connection, 2)
+    opcode = first & 0x0F
+    length = second & 0x7F
+    if length == 126:
+        length = struct.unpack("!H", recv_exact(connection, 2))[0]
+    elif length == 127:
+        length = struct.unpack("!Q", recv_exact(connection, 8))[0]
+    if second & 0x80:
+        mask = recv_exact(connection, 4)
+        payload = bytes(value ^ mask[index % 4] for index, value in enumerate(recv_exact(connection, length)))
+    else:
+        payload = recv_exact(connection, length)
+    return opcode, payload
+
+
+class AISMonitor:
+    """Small server-side AISStream bridge with bounded in-memory retention."""
+
+    def __init__(self, api_key: str) -> None:
+        self.api_key = api_key
+        self.positions: dict[str, dict] = {}
+        self.types: dict[str, str] = {}
+        self.lock = threading.Lock()
+        self.thread: threading.Thread | None = None
+        self.state = "NOT CONFIGURED" if not api_key else "READY"
+        self.updated_at = 0
+        self.error = ""
+
+    def start(self) -> None:
+        if not self.api_key or (self.thread and self.thread.is_alive()):
+            return
+        self.thread = threading.Thread(target=self.run, name="tang-ais", daemon=True)
+        self.thread.start()
+
+    def connect(self) -> socket.socket:
+        raw = socket.create_connection(("stream.aisstream.io", 443), timeout=12)
+        connection = ssl.create_default_context().wrap_socket(raw, server_hostname="stream.aisstream.io")
+        key = base64.b64encode(secrets.token_bytes(16)).decode("ascii")
+        request = (
+            "GET /v0/stream HTTP/1.1\r\nHost: stream.aisstream.io\r\nUpgrade: websocket\r\n"
+            f"Connection: Upgrade\r\nSec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n"
+        )
+        connection.sendall(request.encode("ascii"))
+        response = b""
+        while b"\r\n\r\n" not in response:
+            response += connection.recv(4096)
+            if len(response) > 16384:
+                raise ConnectionError("Invalid AIS handshake")
+        if b" 101 " not in response.split(b"\r\n", 1)[0]:
+            raise ConnectionError("AIS handshake rejected")
+        expected = base64.b64encode(hashlib.sha1((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode()).digest())
+        if expected.lower() not in response.lower():
+            raise ConnectionError("AIS handshake validation failed")
+        return connection
+
+    def consume(self, payload: dict) -> None:
+        metadata = payload.get("MetaData") or {}
+        mmsi = str(metadata.get("MMSI") or "")
+        if not mmsi:
+            return
+        message = payload.get("Message") or {}
+        if payload.get("MessageType") in {"ShipStaticData", "StaticDataReport"}:
+            values = next(iter(message.values()), {}) if message else {}
+            ship_type = values.get("Type") or values.get("TypeAndCargo") or values.get("ShipType")
+            if ship_type is not None:
+                with self.lock:
+                    self.types[mmsi] = str(ship_type)
+            return
+        latitude = metadata.get("Latitude", metadata.get("latitude"))
+        longitude = metadata.get("Longitude", metadata.get("longitude"))
+        if not isinstance(latitude, (int, float)) or not isinstance(longitude, (int, float)):
+            return
+        values = next(iter(message.values()), {}) if message else {}
+        now = int(time.time())
+        row = {
+            "mmsi": mmsi,
+            "name": str(metadata.get("ShipName") or "").strip() or "MMSI " + mmsi,
+            "lat": round(float(latitude), 5),
+            "lon": round(float(longitude), 5),
+            "speed": values.get("Sog"),
+            "course": values.get("Cog"),
+            "type": self.types.get(mmsi, "AIS TARGET"),
+            "seen": now,
+        }
+        with self.lock:
+            self.positions[mmsi] = row
+            self.updated_at = now
+            if len(self.positions) > 3500:
+                oldest = sorted(self.positions, key=lambda key: self.positions[key]["seen"])[:500]
+                for key in oldest:
+                    self.positions.pop(key, None)
+
+    def run(self) -> None:
+        delay = 2
+        while self.api_key:
+            connection: socket.socket | None = None
+            try:
+                self.state = "CONNECTING"
+                connection = self.connect()
+                subscription = {
+                    "APIKey": self.api_key,
+                    "BoundingBoxes": AIS_CORRIDORS,
+                    "FilterMessageTypes": ["PositionReport", "StandardClassBPositionReport", "ExtendedClassBPositionReport", "ShipStaticData", "StaticDataReport"],
+                }
+                connection.sendall(websocket_frame(json.dumps(subscription).encode("utf-8")))
+                connection.settimeout(45)
+                self.state = "LIVE"
+                self.error = ""
+                delay = 2
+                while True:
+                    opcode, data = websocket_message(connection)
+                    if opcode == 8:
+                        raise ConnectionError("AIS stream closed")
+                    if opcode == 9:
+                        connection.sendall(websocket_frame(data, 10))
+                        continue
+                    if opcode not in {1, 2}:
+                        continue
+                    self.consume(json.loads(data.decode("utf-8", "replace")))
+            except (OSError, ValueError, json.JSONDecodeError, ConnectionError) as error:
+                self.state = "RECONNECTING"
+                self.error = str(error)[:160]
+                time.sleep(delay)
+                delay = min(30, delay * 2)
+            finally:
+                if connection:
+                    try:
+                        connection.close()
+                    except OSError:
+                        pass
+
+    def snapshot(self) -> dict:
+        self.start()
+        cutoff = int(time.time()) - 1800
+        with self.lock:
+            rows = [row.copy() for row in self.positions.values() if row["seen"] >= cutoff]
+        rows.sort(key=lambda row: row["seen"], reverse=True)
+        return {
+            "configured": bool(self.api_key),
+            "state": self.state,
+            "updatedAt": self.updated_at,
+            "coverage": "Six major energy-shipping corridors; terrestrial AIS coverage varies",
+            "positions": rows[:800],
+            "count": len(rows),
+            "error": self.error if self.state != "LIVE" else "",
+        }
+
+
+AIS_MONITOR = AISMonitor(AIS_KEY)
 
 
 YAHOO_SYMBOLS = {
@@ -40,6 +249,29 @@ def yahoo_symbol(symbol: str) -> str:
     if symbol.endswith(".us"):
         return symbol[:-3].upper().replace("BRK-B", "BRK-B")
     return symbol.upper()
+
+
+def documented_delay_minutes(provider_symbol: str, exchange: str = "") -> int | None:
+    """Conservative Yahoo delay labels based on its published exchange table."""
+    upper = provider_symbol.upper()
+    exchange = exchange.upper()
+    if upper.endswith(".L") or "LONDON" in exchange:
+        return 20
+    if upper.endswith("=F") or exchange in {"NYM", "CMX", "CBT", "NYB"}:
+        return 30 if exchange in {"NYM", "CMX", "NYB"} or upper.endswith("=F") else 10
+    if upper in {"^FTSE", "^HSI", "^VIX", "^AXJO"}:
+        return 15
+    if upper.endswith((".SS", ".SW")):
+        return 30
+    if upper.endswith((".HK", ".T", ".AX")):
+        return 20
+    if upper.endswith((".PA", ".DE", ".F", ".MI")):
+        return 15
+    if upper.endswith("=X") or upper.endswith("-USD"):
+        return 0
+    if exchange in {"NMS", "NYQ", "NGM", "PCX", "NAS", "NASDAQ", "NYSE"}:
+        return 0
+    return None
 
 
 def fetch_quote(symbol: str) -> tuple[str, dict | None]:
@@ -64,6 +296,8 @@ def fetch_quote(symbol: str) -> tuple[str, dict | None]:
             "change": ((close - previous) / previous) * 100,
             "timestamp": int(meta.get("regularMarketTime") or 0),
             "exchange": meta.get("exchangeName") or "",
+            "currency": meta.get("currency") or "",
+            "delayMinutes": documented_delay_minutes(yahoo_symbol(symbol), meta.get("exchangeName") or ""),
         }
     except (KeyError, TypeError, ValueError, OSError, json.JSONDecodeError, urllib.error.URLError):
         return symbol, None
@@ -96,6 +330,8 @@ def fetch_quotes(symbols: list[str]) -> dict[str, dict]:
             "change": ((price - previous) / previous) * 100,
             "timestamp": int(meta.get("regularMarketTime") or 0),
             "exchange": meta.get("exchangeName") or "",
+            "currency": meta.get("currency") or "",
+            "delayMinutes": documented_delay_minutes(provider_symbol, meta.get("exchangeName") or ""),
         }
     return quotes
 
@@ -166,6 +402,8 @@ def fetch_chart(symbol: str, chart_range: str) -> dict:
         "timezone": meta.get("exchangeTimezoneName") or "UTC",
         "instrumentType": meta.get("instrumentType") or "",
         "marketTime": int(meta.get("regularMarketTime") or points[-1]["t"]),
+        "retrievedAt": int(time.time()),
+        "delayMinutes": documented_delay_minutes(yahoo_symbol(symbol), meta.get("exchangeName") or ""),
         "price": float(meta.get("regularMarketPrice") or points[-1]["c"]),
         "previousClose": float(meta.get("previousClose") or meta.get("chartPreviousClose") or 0),
         "points": points,
@@ -196,7 +434,7 @@ def fetch_news(symbol: str) -> list[dict]:
 
 
 class Handler(SimpleHTTPRequestHandler):
-    server_version = "TangTerminal/2.1"
+    server_version = "TangTerminal/3.0"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
@@ -266,6 +504,9 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(chart)
             except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError) as error:
                 self.send_json({"error": "Market data unavailable", "detail": str(error)}, 503)
+            return
+        if parsed.path == "/api/ais/positions":
+            self.send_json(AIS_MONITOR.snapshot())
             return
         if parsed.path == "/api/ollama/api/tags":
             self.proxy_ollama("GET", "/api/tags")

@@ -98,6 +98,7 @@
     var technical = calculate(payload); var digits = instrument.digits || 2;
     var change = payload.previousClose ? ((technical.last - payload.previousClose) / payload.previousClose) * 100 : null;
     var signalClass = technical.bias.indexOf("BULL") === 0 ? "up" : technical.bias.indexOf("BEAR") === 0 ? "down" : "amber";
+    var delayLabel = payload.delayMinutes == null ? "DELAY UNKNOWN" : Number(payload.delayMinutes) > 0 ? payload.delayMinutes + " MIN DELAY" : "REAL-TIME INDICATED";
     var rangeButtons = ranges.map(function (item) {
       return '<button class="range-btn ' + (item.value === currentRange ? "active" : "") + '" data-range="' + item.value + '">' + item.label + '</button>';
     }).join("");
@@ -107,7 +108,7 @@
     title.textContent = instrument.sym + " · " + instrument.name;
     content.innerHTML =
       '<div class="detail-summary"><div><span class="detail-price">' + price(technical.last, digits) + '</span> <span class="' + (change == null ? "faint" : TT.widgets.valueClass(change)) + '">' + (change == null ? "" : (change >= 0 ? "+" : "") + change.toFixed(2) + "%") + '</span><button id="watchlist-toggle" class="watchlist-toggle ' + (TT.watchlist.contains(currentSymbol) ? "active" : "") + '">' + (TT.watchlist.contains(currentSymbol) ? "★ WATCHING" : "+ WATCHLIST") + '</button></div>' +
-      '<div class="detail-provenance">' + escapeHTML(payload.provider || "LOCAL") + ' · ' + escapeHTML(payload.exchange || "") + ' · AS OF ' + escapeHTML(formatTime(payload.marketTime)) + '<br><span>Quotes may be delayed by the exchange. Verify before trading.</span></div></div>' +
+      '<div class="detail-provenance">' + escapeHTML(payload.provider || "LOCAL") + ' · ' + escapeHTML(payload.exchange || "") + ' · ' + escapeHTML(payload.currency || "") + '<br>OBSERVED ' + escapeHTML(formatTime(payload.marketTime)) + ' · RETRIEVED ' + escapeHTML(formatTime(payload.retrievedAt)) + '<br><span>' + escapeHTML(delayLabel) + ' · VERIFY BEFORE TRADING</span></div></div>' +
       '<div class="range-bar" aria-label="Chart range">' + rangeButtons + '</div>' +
       '<section class="chart-card"><canvas id="price-chart" aria-label="' + escapeHTML(instrument.name) + ' price chart"></canvas><div class="chart-legend"><span>— PRICE</span><span class="amber">— SMA20</span><span>' + payload.points.length + ' BARS · ' + escapeHTML(payload.interval.toUpperCase()) + '</span></div></section>' +
       '<div class="research-grid"><section class="research-card"><h3>TECHNICALS</h3><div class="metric-grid">' +
@@ -161,7 +162,7 @@
     var instrument = TT.universe.index[symbol]; var count = chartRange === "1d" ? 78 : chartRange === "5d" ? 120 : chartRange === "5y" ? 260 : 100;
     var seed = Number(instrument.base) || 100; var points = []; var now = Date.now() / 1000;
     for (var index = 0; index < count; index += 1) { var wave = Math.sin(index * 0.31 + symbol.length) * 0.004; seed *= 1 + wave + ((index % 7) - 3) * 0.00025; points.push({ t: now - (count - index) * 86400, o: seed * 0.997, h: seed * 1.006, l: seed * 0.994, c: seed, v: null }); }
-    return { symbol: symbol, range: chartRange, interval: "1d", currency: "USD", exchange: "OFFLINE DEMO", marketTime: Math.floor(now), price: seed, previousClose: points[points.length - 2].c, points: points, news: [], provider: "SIMULATED — NOT MARKET DATA" };
+    return { symbol: symbol, range: chartRange, interval: "1d", currency: "USD", exchange: "OFFLINE DEMO", marketTime: Math.floor(now), retrievedAt: Math.floor(now), delayMinutes: null, price: seed, previousClose: points[points.length - 2].c, points: points, news: [], provider: "SIMULATED — NOT MARKET DATA" };
   }
 
   function load() {
