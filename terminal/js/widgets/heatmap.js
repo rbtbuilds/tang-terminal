@@ -11,7 +11,7 @@
         panel.querySelector(".panel-body").innerHTML = '<div class="heatmap">' + TT.universe.heatmap.map(function (group) {
           return group.members.map(function (item) {
             var q = quotes[item.sym]; var change = q ? q.change : 0;
-            return '<div class="heat-tile ' + heatClass(change) + '" title="' + item.name + '"><span class="h-name">' + item.sym + '</span><span class="h-val">' + (q ? (change >= 0 ? "+" : "") + change.toFixed(2) + "%" : "—") + '</span><span class="h-sub">' + group.group + ' · ' + item.name + '</span></div>';
+            return '<div class="heat-tile quote-action ' + heatClass(change) + '" data-symbol="' + item.sym + '" tabindex="0" role="button" title="Open ' + item.name + ' research"><span class="h-name">' + item.sym + '</span><span class="h-val">' + (q ? (change >= 0 ? "+" : "") + change.toFixed(2) + "%" : "—") + '</span><span class="h-sub">' + group.group + ' · ' + item.name + '</span></div>';
           }).join("");
         }).join("") + '</div>';
       };

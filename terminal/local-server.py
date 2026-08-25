@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TANG Terminal local server: static files, Stooq quote bridge, Ollama bridge."""
+"""TANG Terminal local server: static files, market-data bridge, Ollama bridge."""
 from __future__ import annotations
 
 import argparse
@@ -7,6 +7,7 @@ import json
 import mimetypes
 import os
 import pathlib
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -15,6 +16,10 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = pathlib.Path(__file__).resolve().parent
 OLLAMA = os.environ.get("TANG_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
+RANGE_INTERVALS = {
+    "1d": "5m", "5d": "15m", "1mo": "1h", "3mo": "1d",
+    "6mo": "1d", "1y": "1d", "5y": "1wk",
+}
 
 
 YAHOO_SYMBOLS = {
@@ -37,7 +42,7 @@ def yahoo_symbol(symbol: str) -> str:
 def fetch_quote(symbol: str) -> tuple[str, dict | None]:
     """Fetch one quote from Yahoo's public chart feed."""
     safe = urllib.parse.quote(yahoo_symbol(symbol), safe="")
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{safe}?range=5d&interval=1d"
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{safe}?range=1d&interval=1m"
     try:
         request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 TANG-Terminal/1.0"})
         with urllib.request.urlopen(request, timeout=8) as response:
@@ -48,16 +53,91 @@ def fetch_quote(symbol: str) -> tuple[str, dict | None]:
         result = results[0]
         meta = result.get("meta", {})
         close = float(meta.get("regularMarketPrice") or 0)
-        previous = float(meta.get("chartPreviousClose") or meta.get("previousClose") or 0)
+        previous = float(meta.get("previousClose") or meta.get("chartPreviousClose") or 0)
         if close <= 0 or previous <= 0:
             return symbol, None
-        return symbol, {"price": close, "change": ((close - previous) / previous) * 100}
+        return symbol, {
+            "price": close,
+            "change": ((close - previous) / previous) * 100,
+            "timestamp": int(meta.get("regularMarketTime") or 0),
+            "exchange": meta.get("exchangeName") or "",
+        }
     except (KeyError, TypeError, ValueError, OSError, json.JSONDecodeError, urllib.error.URLError):
         return symbol, None
 
 
+def fetch_chart(symbol: str, chart_range: str) -> dict:
+    """Fetch normalized OHLCV chart points and provenance metadata."""
+    interval = RANGE_INTERVALS.get(chart_range, "1d")
+    chart_range = chart_range if chart_range in RANGE_INTERVALS else "3mo"
+    safe = urllib.parse.quote(yahoo_symbol(symbol), safe="")
+    url = (
+        f"https://query1.finance.yahoo.com/v8/finance/chart/{safe}"
+        f"?range={chart_range}&interval={interval}&events=div%2Csplits"
+    )
+    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 TANG-Terminal/1.0"})
+    with urllib.request.urlopen(request, timeout=12) as response:
+        payload = json.loads(response.read().decode("utf-8", "replace"))
+    results = payload.get("chart", {}).get("result") or []
+    if not results:
+        raise ValueError("No chart data returned")
+    result = results[0]
+    meta = result.get("meta", {})
+    timestamps = result.get("timestamp") or []
+    quote = (result.get("indicators", {}).get("quote") or [{}])[0]
+    points = []
+    for index, timestamp in enumerate(timestamps):
+        close_values = quote.get("close") or []
+        if index >= len(close_values) or close_values[index] is None:
+            continue
+        point = {"t": timestamp, "c": close_values[index]}
+        for short, key in (("o", "open"), ("h", "high"), ("l", "low"), ("v", "volume")):
+            values = quote.get(key) or []
+            point[short] = values[index] if index < len(values) else None
+        points.append(point)
+    if not points:
+        raise ValueError("Chart contained no prices")
+    return {
+        "symbol": symbol,
+        "providerSymbol": yahoo_symbol(symbol),
+        "range": chart_range,
+        "interval": interval,
+        "currency": meta.get("currency") or "USD",
+        "exchange": meta.get("fullExchangeName") or meta.get("exchangeName") or "",
+        "timezone": meta.get("exchangeTimezoneName") or "UTC",
+        "instrumentType": meta.get("instrumentType") or "",
+        "marketTime": int(meta.get("regularMarketTime") or points[-1]["t"]),
+        "price": float(meta.get("regularMarketPrice") or points[-1]["c"]),
+        "previousClose": float(meta.get("previousClose") or meta.get("chartPreviousClose") or 0),
+        "points": points,
+    }
+
+
+def fetch_news(symbol: str) -> list[dict]:
+    """Fetch a small recent-news set for the provider symbol."""
+    query = urllib.parse.quote(yahoo_symbol(symbol), safe="")
+    url = (
+        "https://query1.finance.yahoo.com/v1/finance/search"
+        f"?q={query}&quotesCount=1&newsCount=8&enableFuzzyQuery=false"
+    )
+    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 TANG-Terminal/1.0"})
+    with urllib.request.urlopen(request, timeout=10) as response:
+        payload = json.loads(response.read().decode("utf-8", "replace"))
+    news = []
+    for item in payload.get("news") or []:
+        title, link = item.get("title"), item.get("link")
+        if title and link and link.startswith(("https://", "http://")):
+            news.append({
+                "title": title,
+                "publisher": item.get("publisher") or "Unknown publisher",
+                "published": int(item.get("providerPublishTime") or 0),
+                "link": link,
+            })
+    return news
+
+
 class Handler(SimpleHTTPRequestHandler):
-    server_version = "TangTerminal/1.0"
+    server_version = "TangTerminal/1.1"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
@@ -80,7 +160,29 @@ class Handler(SimpleHTTPRequestHandler):
             symbols = [s for s in urllib.parse.parse_qs(parsed.query).get("symbols", [""])[0].split(",") if s][:60]
             with ThreadPoolExecutor(max_workers=10) as pool:
                 pairs = list(pool.map(fetch_quote, symbols))
-            self.send_json({"quotes": {symbol: quote for symbol, quote in pairs if quote}})
+            self.send_json({
+                "quotes": {symbol: quote for symbol, quote in pairs if quote},
+                "provider": "Yahoo Finance",
+                "retrievedAt": int(time.time()),
+            })
+            return
+        if parsed.path == "/api/instrument":
+            params = urllib.parse.parse_qs(parsed.query)
+            symbol = (params.get("symbol") or [""])[0][:24]
+            chart_range = (params.get("range") or ["3mo"])[0]
+            if not symbol:
+                self.send_json({"error": "Symbol is required"}, 400)
+                return
+            try:
+                chart = fetch_chart(symbol, chart_range)
+                try:
+                    chart["news"] = fetch_news(symbol)
+                except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError):
+                    chart["news"] = []
+                chart["provider"] = "Yahoo Finance"
+                self.send_json(chart)
+            except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError) as error:
+                self.send_json({"error": "Market data unavailable", "detail": str(error)}, 503)
             return
         if parsed.path == "/api/ollama/api/tags":
             self.proxy_ollama("GET", "/api/tags")

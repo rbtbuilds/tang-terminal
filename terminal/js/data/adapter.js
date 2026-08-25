@@ -72,12 +72,14 @@
           if (q && Number.isFinite(q.price)) {
             self.rows[item.sym] = {
               sym: item.sym, price: q.price, change: Number(q.change) || 0,
-              digits: item.digits || 2, source: "YAHOO"
+              digits: item.digits || 2, source: "YAHOO FINANCE",
+              timestamp: Number(q.timestamp) || 0, exchange: q.exchange || ""
             };
           }
         });
         if (!Object.keys(self.rows).length) throw new Error("No live quotes available");
-        self.onStatus("ok", "LIVE · " + Object.keys(self.rows).length);
+        var stamp = payload.retrievedAt ? new Date(payload.retrievedAt * 1000).toISOString().slice(11, 19) : "NOW";
+        self.onStatus("ok", "LIVE · " + stamp + " UTC · " + Object.keys(self.rows).length);
         self.onData(self.rows);
       })
       .catch(function () {

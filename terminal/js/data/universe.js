@@ -76,11 +76,11 @@
 
     /* ------------------------------------------------------- precious metals */
     metals: [
-      { sym: "XAU", name: "Gold",      unit: "oz", live: "xauusd", base: 3398.5, digits: 2 },
-      { sym: "XAG", name: "Silver",    unit: "oz", live: "xagusd", base: 38.42,  digits: 3 },
-      { sym: "XPT", name: "Platinum",  unit: "oz", live: "xptusd", base: 1342.0, digits: 2 },
-      { sym: "XPD", name: "Palladium", unit: "oz", live: "xpusd",  base: 1128.0, digits: 2 },
-      { sym: "HG",  name: "Copper",    unit: "lb", live: "hg.f",   base: 4.52,   digits: 3 }
+      { sym: "XAU", name: "Gold Futures",      unit: "oz", live: "xauusd", base: 3398.5, digits: 2 },
+      { sym: "XAG", name: "Silver Futures",    unit: "oz", live: "xagusd", base: 38.42,  digits: 3 },
+      { sym: "XPT", name: "Platinum Futures",  unit: "oz", live: "xptusd", base: 1342.0, digits: 2 },
+      { sym: "XPD", name: "Palladium Futures", unit: "oz", live: "xpusd",  base: 1128.0, digits: 2 },
+      { sym: "HG",  name: "Copper Futures",    unit: "lb", live: "hg.f",   base: 4.52,   digits: 3 }
     ],
 
     /* -------------------------------------------------------- world clocks */

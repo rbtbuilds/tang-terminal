@@ -1,4 +1,4 @@
-TANG TERMINAL 1.0.0
+TANG TERMINAL 1.1.0
 ===================
 
 FASTEST START

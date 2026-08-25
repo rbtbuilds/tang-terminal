@@ -7,7 +7,7 @@
       panel.update = function (quotes) {
         panel.querySelector("tbody").innerHTML = TT.universe.metals.map(function (item) {
           var q = quotes[item.sym];
-          return '<tr><td><strong class="amber">' + item.sym + '</strong> <span class="faint">' + item.name + '/' + item.unit + '</span></td><td class="num">' + (q ? '$' + TT.widgets.format(q.price, item.digits) : '—') + '</td><td class="num ' + (q ? TT.widgets.valueClass(q.change) : "faint") + '">' + (q ? (q.change >= 0 ? "+" : "") + q.change.toFixed(2) + '%' : '—') + '</td></tr>';
+          return '<tr class="quote-action" data-symbol="' + item.sym + '" tabindex="0" role="button"><td><strong class="amber">' + item.sym + '</strong> <span class="faint">' + item.name + '/' + item.unit + '</span></td><td class="num">' + (q ? '$' + TT.widgets.format(q.price, item.digits) : '—') + '</td><td class="num ' + (q ? TT.widgets.valueClass(q.change) : "faint") + '">' + (q ? (q.change >= 0 ? "+" : "") + q.change.toFixed(2) + '%' : '—') + '</td></tr>';
         }).join("");
       };
       return panel;

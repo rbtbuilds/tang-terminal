@@ -16,7 +16,7 @@
   <header id="titlebar" class="titlebar">
     <div class="titlebar-left">
       <span class="logo">▮▮ TANG TERMINAL</span>
-      <span class="version" id="app-version">v1.0.0</span>
+      <span class="version" id="app-version">v1.1.0</span>
     </div>
 
     <div class="titlebar-center">
@@ -43,6 +43,20 @@
     <div class="ticker-track" id="ticker-track"></div>
   </footer>
 
+  <!-- Instrument research drawer; populated on demand with no external UI assets. -->
+  <div id="detail-overlay" class="detail-overlay" hidden>
+    <section class="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+      <header class="detail-header">
+        <div>
+          <span class="detail-kicker">INSTRUMENT RESEARCH</span>
+          <h2 id="detail-title">—</h2>
+        </div>
+        <button id="detail-close" class="detail-close" aria-label="Close instrument research">ESC ×</button>
+      </header>
+      <div id="detail-content" class="detail-content"></div>
+    </section>
+  </div>
+
   <!-- Classic scripts (no ES modules) so the app runs from file:// with zero build step. -->
   <script src="js/store.js"></script>
   <script src="js/data/universe.js"></script>
@@ -56,6 +70,7 @@
   <script src="js/widgets/metals.js"></script>
   <script src="js/ollama.js"></script>
   <script src="js/widgets/assistant.js"></script>
+  <script src="js/details.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
