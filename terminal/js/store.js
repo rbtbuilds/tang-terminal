@@ -75,7 +75,7 @@
   }
 
   function copyLayout(layout) {
-    return layout.map(function (entry) { return { id: entry.id, size: entry.size }; });
+    return layout.map(function (entry) { return { id: entry.id, size: entry.size, height: entry.height || "auto" }; });
   }
 
   function workspaceState() {

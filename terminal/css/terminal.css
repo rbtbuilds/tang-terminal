@@ -181,7 +181,7 @@ button { font-family: inherit; }
   padding: var(--gap);
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  grid-auto-rows: minmax(180px, auto);
+  grid-auto-rows: minmax(calc(180px * var(--font-scale)), auto);
   grid-auto-flow: dense;
   gap: var(--gap);
   align-content: start;
@@ -211,7 +211,7 @@ button { font-family: inherit; }
 .panel {
   display: flex;
   flex-direction: column;
-  min-height: 180px;
+  min-height: calc(180px * var(--font-scale));
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -264,7 +264,8 @@ button { font-family: inherit; }
 
 .panel-body {
   flex: 1 1 auto;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: visible;
   padding: 6px 8px;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
@@ -321,8 +322,8 @@ table.quote-table .quote-action:hover td::first-letter { color: var(--accent); }
   display: grid;
   gap: 4px;
   height: 100%;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  grid-auto-rows: minmax(64px, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(calc(110px * var(--font-scale)), 1fr));
+  grid-auto-rows: minmax(calc(64px * var(--font-scale)), 1fr);
 }
 .heat-tile {
   display: flex;
@@ -348,7 +349,7 @@ table.quote-table .quote-action:hover td::first-letter { color: var(--accent); }
 /* --------------------------------------------------------------- clocks */
 .clock-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(calc(118px * var(--font-scale)), 1fr));
   gap: 6px;
 }
 .clock-cell {
@@ -432,7 +433,26 @@ table.quote-table .quote-action:hover td::first-letter { color: var(--accent); }
   flex-wrap: wrap;
 }
 .assistant-config select { cursor: pointer; }
-.assistant-config input { cursor: text; width: 170px; }
+.assistant-config label { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.assistant-config input { cursor: text; width: calc(185px * var(--font-scale)); }
+.assistant-config select { width: calc(285px * var(--font-scale)); max-width: 46vw; }
+
+/* Panels grow with typography so data remains contained instead of clipping. */
+.panel[data-widget-id="indices"],
+.panel[data-widget-id="stocks"] { min-height: calc(285px * var(--font-scale)); }
+.panel[data-widget-id="heatmap"] { min-height: calc(270px * var(--font-scale)); }
+.panel[data-widget-id="assistant"] { min-height: calc(235px * var(--font-scale)); }
+.panel[data-widget-id="metals"],
+.panel[data-widget-id="macro"],
+.panel[data-widget-id="energy"],
+.panel[data-widget-id="tankers"] { min-height: calc(225px * var(--font-scale)); }
+.panel[data-widget-id="commodities"] { min-height: calc(440px * var(--font-scale)); }
+.panel[data-widget-id="watchlist"] { min-height: calc(205px * var(--font-scale)); }
+.panel[data-widget-id="watchlist"] .panel-body { max-height: calc(440px * var(--font-scale)); overflow-y: auto; }
+.panel.height-tall { min-height: calc(430px * var(--font-scale)) !important; }
+.panel.height-max { min-height: calc(680px * var(--font-scale)) !important; }
+.panel.height-tall .panel-body,
+.panel.height-max .panel-body { max-height: none !important; overflow-y: visible !important; }
 
 /* ------------------------------------------------------------ tickerbar */
 .tickerbar {

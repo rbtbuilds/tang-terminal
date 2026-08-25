@@ -61,6 +61,7 @@ The assistant receives the current visible quote snapshot with each prompt. It i
 
 - Drag a panel by its `⠿` grip to reorder it.
 - Select **↔ SIZE** to cycle among compact, medium, and full width.
+- Select **↕ AUTO / TALL / MAX** to expand a widget vertically. Tall and maximum modes release internal vertical scrolling so content continues down the dashboard.
 - Select **RESET LAYOUT** to restore the factory arrangement.
 - Select **DATA: DEMO/LIVE** to switch adapters. Live mode requires the local launcher and internet access.
 - Select **FULLSCREEN** to enter a borderless browser canvas. Move the browser window to the desired display first, then enter fullscreen. Browser security requires this user gesture.
