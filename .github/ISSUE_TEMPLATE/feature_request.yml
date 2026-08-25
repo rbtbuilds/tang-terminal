@@ -1,0 +1,32 @@
+name: Feature request
+description: Propose a focused improvement or data adapter
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Research problem
+      description: What trader workflow or evidence gap should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed experience
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: Data source and rights
+      description: Include provider, documentation, freshness, delays, rate limits, authentication, licensing, and redistribution constraints.
+  - type: checkboxes
+    id: trust
+    attributes:
+      label: Trust model
+      options:
+        - label: I have identified whether values are public records, provider research, or local calculations.
+          required: true
+        - label: The proposal can fail gracefully without fabricated data.
+          required: true

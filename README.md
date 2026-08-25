@@ -1,6 +1,14 @@
 # TANG Terminal
 
-TANG Terminal is a compact, terminal-style global market workstation. It runs with no package manager, framework, CDN, analytics, or cloud account. Purpose-built pages replace the former continuous dashboard, while collision-free panel layouts persist in `localStorage`.
+### Trading Analytics & Navigation Grid
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-34f57a.svg)](LICENSE)
+[![No build step](https://img.shields.io/badge/build-none-34f57a.svg)](#quick-start)
+[![Local first](https://img.shields.io/badge/data-local--first-34f57a.svg)](#reliability-and-privacy)
+
+TANG Terminal—**Trading Analytics & Navigation Grid**—is an open-source, terminal-style global market research workstation for retail traders. It runs with no package manager, framework, CDN, analytics, or cloud account. Purpose-built pages replace the former continuous dashboard, while collision-free panel layouts persist in `localStorage`.
+
+> TANG is a research and monitoring interface, not a broker, execution venue, fiduciary, or source of personalized financial advice. Verify connected data and original sources before making decisions.
 
 ## Dashboard
 
@@ -145,6 +153,12 @@ python3 terminal/local-server.py --port 8787
 ```
 
 Open the page, test panel drag/resize/reset, switch feeds, enter/exit fullscreen, and connect to Ollama. Changes require no build step.
+
+## Contributing
+
+Contributions are welcome, especially well-attributed data adapters, reproducible analytics, accessibility improvements, and reliability fixes. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Security issues should follow [SECURITY.md](SECURITY.md), not a public issue.
+
+By participating, you agree to the project [Code of Conduct](CODE_OF_CONDUCT.md). Release history is recorded in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

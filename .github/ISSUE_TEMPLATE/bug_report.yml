@@ -1,0 +1,41 @@
+name: Bug report
+description: Report a reproducible problem in TANG Terminal
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Never include API keys, private market data, or personal portfolio information.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the problem and the expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      placeholder: "1. Open…\n2. Select…\n3. Observe…"
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Data mode
+      options: [Offline demo, Local-server demo, Live, Not applicable]
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: TANG version, operating system, browser, viewport, and font scale.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or screenshots
+      description: Remove credentials, private portfolio data, and personal information first.
