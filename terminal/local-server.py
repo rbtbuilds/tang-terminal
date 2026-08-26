@@ -6,6 +6,7 @@ import argparse
 import base64
 import hashlib
 import json
+import math
 import mimetypes
 import os
 import pathlib
@@ -29,7 +30,7 @@ ROOT = pathlib.Path(__file__).resolve().parent
 
 def load_local_environment() -> None:
     """Load ignored local credentials without exposing them to the browser."""
-    for filename in (".tang-terminal.env", ".tang-finnhub.env"):
+    for filename in (".tang-terminal.env", ".tang-finnhub.env", ".tang-twelvedata.env"):
         path = ROOT / filename
         if not path.exists():
             continue
@@ -44,6 +45,7 @@ load_local_environment()
 OLLAMA = os.environ.get("TANG_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 AIS_KEY = os.environ.get("TANG_AISSTREAM_API_KEY", "").strip()
 FINNHUB_KEY = os.environ.get("TANG_FINNHUB_API_KEY", "").strip()
+TWELVE_DATA_KEY = os.environ.get("TANG_TWELVEDATA_API_KEY", "").strip()
 RANGE_INTERVALS = {
     "1d": "5m", "5d": "15m", "1mo": "1h", "3mo": "1d",
     "6mo": "1d", "1y": "1d", "5y": "1wk",
@@ -54,6 +56,10 @@ INTELLIGENCE_CACHE: tuple[float, dict] | None = None
 INTELLIGENCE_CACHE_LOCK = threading.Lock()
 EARNINGS_CACHE: dict[str, tuple[float, dict]] = {}
 EARNINGS_CACHE_LOCK = threading.Lock()
+RESEARCH_CACHE: dict[str, tuple[float, dict]] = {}
+RESEARCH_CACHE_LOCK = threading.Lock()
+TWELVE_CHART_CACHE: dict[str, tuple[float, dict]] = {}
+TWELVE_CHART_CACHE_LOCK = threading.Lock()
 SEC_USER_AGENT = os.environ.get(
     "TANG_SEC_USER_AGENT", "TANG Terminal local research tang-terminal@example.invalid"
 )
@@ -422,6 +428,94 @@ def fetch_chart(symbol: str, chart_range: str) -> dict:
     }
 
 
+TWELVE_RANGE_SETTINGS = {
+    "1d": ("1min", 390), "5d": ("15min", 180), "1mo": ("1h", 180),
+    "3mo": ("1day", 100), "6mo": ("1day", 190), "1y": ("1day", 270),
+    "5y": ("1week", 270),
+}
+
+
+def twelve_data_symbol(symbol: str) -> str:
+    """Convert TANG's built-in provider aliases to Twelve Data notation."""
+    normalized = yahoo_symbol(symbol)
+    if normalized.endswith("=X"):
+        pair = normalized[:-2]
+        return f"{pair[:3]}/{pair[3:]}" if len(pair) == 6 else pair
+    if normalized.endswith("-USD"):
+        return normalized.replace("-USD", "/USD")
+    return normalized
+
+
+def fetch_twelve_chart(symbol: str, chart_range: str) -> dict:
+    """Fetch free-tier Twelve Data OHLCV without putting its key in a URL."""
+    if not TWELVE_DATA_KEY:
+        raise PermissionError("Twelve Data is not configured. Add TANG_TWELVEDATA_API_KEY to the local environment file.")
+    chart_range = chart_range if chart_range in TWELVE_RANGE_SETTINGS else "3mo"
+    interval, outputsize = TWELVE_RANGE_SETTINGS[chart_range]
+    provider_symbol = twelve_data_symbol(symbol)
+    cache_key = f"{provider_symbol}:{chart_range}"
+    with TWELVE_CHART_CACHE_LOCK:
+        cached = TWELVE_CHART_CACHE.get(cache_key)
+    if cached and time.time() - cached[0] < 55:
+        return cached[1]
+    query = urllib.parse.urlencode({
+        "symbol": provider_symbol, "interval": interval,
+        "outputsize": str(outputsize), "timezone": "UTC", "format": "JSON",
+    })
+    request = urllib.request.Request(
+        f"https://api.twelvedata.com/time_series?{query}",
+        headers={
+            "User-Agent": "Mozilla/5.0 TANG-Terminal/3.3",
+            "Authorization": f"apikey {TWELVE_DATA_KEY}",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        payload = json.loads(response.read().decode("utf-8", "replace"))
+    if payload.get("status") == "error" or not payload.get("values"):
+        raise ValueError(payload.get("message") or "No Twelve Data chart data returned")
+    meta = payload.get("meta") or {}
+    points = []
+    for row in reversed(payload.get("values") or []):
+        try:
+            timestamp = int(datetime.fromisoformat(str(row["datetime"])).replace(tzinfo=timezone.utc).timestamp())
+            points.append({
+                "t": timestamp, "o": float(row["open"]), "h": float(row["high"]),
+                "l": float(row["low"]), "c": float(row["close"]),
+                "v": float(row["volume"]) if row.get("volume") not in (None, "") else None,
+            })
+        except (KeyError, TypeError, ValueError):
+            continue
+    if not points:
+        raise ValueError("Twelve Data chart contained no usable prices")
+    instrument_type = str(meta.get("type") or "").lower()
+    exchange = str(meta.get("exchange") or "").upper()
+    realtime_scope = (
+        any(label in instrument_type for label in ("currency", "forex", "digital", "crypto"))
+        or any(label in exchange for label in ("NASDAQ", "NYSE", "AMEX", "ARCA", "CBOE", "IEX"))
+    )
+    intraday = interval not in {"1day", "1week", "1month"}
+    coverage_note = (
+        "Free real-time US feed uses limited venues (about 5% of US trading volume); 8 requests/minute and 800/day."
+        if realtime_scope and intraday else
+        "This range uses end-of-day bars on the free tier; 8 requests/minute and 800/day."
+    )
+    result = {
+        "symbol": symbol, "providerSymbol": meta.get("symbol") or provider_symbol,
+        "range": chart_range, "interval": interval,
+        "currency": meta.get("currency") or "", "exchange": meta.get("exchange") or "",
+        "timezone": meta.get("exchange_timezone") or "UTC", "instrumentType": meta.get("type") or "",
+        "marketTime": points[-1]["t"], "retrievedAt": int(time.time()),
+        "delayMinutes": 0 if realtime_scope and intraday else None,
+        "price": points[-1]["c"], "previousClose": points[-2]["c"] if len(points) > 1 else 0,
+        "points": points, "provider": "Twelve Data Basic",
+        "coverageNote": coverage_note,
+        "refreshSeconds": 60,
+    }
+    with TWELVE_CHART_CACHE_LOCK:
+        TWELVE_CHART_CACHE[cache_key] = (time.time(), result)
+    return result
+
+
 def fetch_news(symbol: str) -> list[dict]:
     """Fetch a small recent-news set for the provider symbol."""
     query = urllib.parse.quote(yahoo_symbol(symbol), safe="")
@@ -656,8 +750,158 @@ def fetch_earnings(symbols: list[str]) -> dict:
     return result
 
 
+def safe_number(value) -> float | None:
+    try:
+        number = float(value)
+        return number if math.isfinite(number) else None
+    except (TypeError, ValueError):
+        return None
+
+
+def historical_performance(points: list[dict]) -> dict:
+    """Calculate transparent close-to-close returns from daily Yahoo bars."""
+    if len(points) < 2:
+        return {"returns": {}, "maxDrawdown1Y": None, "annualizedVolatility1Y": None}
+    latest = points[-1]
+    latest_time = datetime.fromtimestamp(latest["t"], timezone.utc)
+
+    def change_from(cutoff: datetime) -> float | None:
+        candidates = [point for point in points[:-1] if point["t"] <= cutoff.timestamp()]
+        baseline = candidates[-1] if candidates else points[0]
+        close = safe_number(baseline.get("c"))
+        return round((latest["c"] / close - 1) * 100, 2) if close else None
+
+    returns = {
+        "1D": round((latest["c"] / points[-2]["c"] - 1) * 100, 2) if points[-2].get("c") else None,
+        "1W": change_from(latest_time - timedelta(days=7)),
+        "1M": change_from(latest_time - timedelta(days=30)),
+        "3M": change_from(latest_time - timedelta(days=91)),
+        "YTD": change_from(datetime(latest_time.year, 1, 1, tzinfo=timezone.utc)),
+        "1Y": change_from(latest_time - timedelta(days=365)),
+    }
+    peak = float(points[0]["c"])
+    max_drawdown = 0.0
+    daily_returns = []
+    for index, point in enumerate(points):
+        close = float(point["c"])
+        peak = max(peak, close)
+        max_drawdown = min(max_drawdown, (close / peak - 1) * 100)
+        if index and points[index - 1].get("c"):
+            daily_returns.append(close / float(points[index - 1]["c"]) - 1)
+    volatility = None
+    if len(daily_returns) > 1:
+        average = sum(daily_returns) / len(daily_returns)
+        variance = sum((value - average) ** 2 for value in daily_returns) / (len(daily_returns) - 1)
+        volatility = round(math.sqrt(variance) * math.sqrt(252) * 100, 2)
+    return {
+        "returns": returns, "maxDrawdown1Y": round(max_drawdown, 2),
+        "annualizedVolatility1Y": volatility,
+    }
+
+
+def finnhub_equity_symbol(symbol: str) -> str | None:
+    candidate = yahoo_symbol(symbol).upper()
+    if candidate.endswith(".US"):
+        candidate = candidate[:-3]
+    if candidate in {"BRK-B", "BRK.B"}:
+        return "BRK.B"
+    return candidate if re.fullmatch(r"[A-Z][A-Z0-9-]{0,14}", candidate) else None
+
+
+def fetch_instrument_research(symbol: str) -> dict:
+    """Build a cached research sheet from free Finnhub fields and Yahoo history."""
+    equity_symbol = finnhub_equity_symbol(symbol)
+    cache_key = equity_symbol or yahoo_symbol(symbol)
+    with RESEARCH_CACHE_LOCK:
+        cached = RESEARCH_CACHE.get(cache_key)
+    if cached and time.time() - cached[0] < 900:
+        return cached[1]
+
+    result = {
+        "symbol": equity_symbol or symbol, "retrievedAt": int(time.time()),
+        "finnhubConfigured": bool(FINNHUB_KEY), "finnhubSupported": bool(equity_symbol),
+        "recommendation": None, "fundamentals": {}, "peers": [],
+        "earningsHistory": [], "nextEarnings": None, "performance": {}, "errors": {},
+    }
+    try:
+        history = fetch_chart(symbol, "1y")
+        result["performance"] = historical_performance(history["points"])
+        result["performance"]["provider"] = "Yahoo Finance daily adjusted-by-provider bars"
+        result["performance"]["through"] = history["marketTime"]
+    except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError) as error:
+        result["errors"]["performance"] = str(error)
+
+    if not FINNHUB_KEY:
+        result["notice"] = "Add a free Finnhub key to enable earnings, analyst trends, fundamentals and peers."
+    elif not equity_symbol:
+        result["notice"] = "Finnhub's free research adapter currently supports standard US equity symbols."
+    else:
+        today = datetime.now(timezone.utc).date()
+        future = today + timedelta(days=365)
+        calls = {
+            "recommendations": ("stock/recommendation", {"symbol": equity_symbol}),
+            "metrics": ("stock/metric", {"symbol": equity_symbol, "metric": "all"}),
+            "peers": ("stock/peers", {"symbol": equity_symbol}),
+            "earnings": ("stock/earnings", {"symbol": equity_symbol, "limit": "4"}),
+            "calendar": ("calendar/earnings", {
+                "symbol": equity_symbol, "from": today.isoformat(), "to": future.isoformat(),
+            }),
+        }
+
+        def run_call(item):
+            name, (path, params) = item
+            try:
+                return name, fetch_finnhub_json(path, params), None
+            except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError) as error:
+                return name, None, str(error)
+
+        with ThreadPoolExecutor(max_workers=5) as pool:
+            responses = {name: (payload, error) for name, payload, error in pool.map(run_call, calls.items())}
+        for name, (_, error) in responses.items():
+            if error:
+                result["errors"][name] = error
+
+        recommendations = responses["recommendations"][0] or []
+        if recommendations:
+            row = recommendations[0]
+            result["recommendation"] = {
+                "period": row.get("period"), "strongBuy": row.get("strongBuy"),
+                "buy": row.get("buy"), "hold": row.get("hold"),
+                "sell": row.get("sell"), "strongSell": row.get("strongSell"),
+            }
+        metric = (responses["metrics"][0] or {}).get("metric", {})
+        metric_map = {
+            "marketCapMillions": "marketCapitalization", "peTTM": "peTTM", "forwardPE": "forwardPE",
+            "priceSalesTTM": "psTTM", "beta": "beta", "grossMarginTTM": "grossMarginTTM",
+            "netMarginTTM": "netProfitMarginTTM", "revenueGrowthTTM": "revenueGrowthTTMYoy",
+            "epsGrowthTTM": "epsGrowthTTMYoy", "roeTTM": "roeTTM", "dividendYield": "currentDividendYieldTTM",
+            "week52High": "52WeekHigh", "week52Low": "52WeekLow", "week52Return": "52WeekPriceReturnDaily",
+        }
+        result["fundamentals"] = {key: safe_number(metric.get(source)) for key, source in metric_map.items()}
+        result["peers"] = [str(item) for item in (responses["peers"][0] or []) if item and item != equity_symbol][:10]
+        result["earningsHistory"] = [{
+            "period": row.get("period"), "quarter": row.get("quarter"), "year": row.get("year"),
+            "actual": safe_number(row.get("actual")), "estimate": safe_number(row.get("estimate")),
+            "surprise": safe_number(row.get("surprise")), "surprisePercent": safe_number(row.get("surprisePercent")),
+        } for row in (responses["earnings"][0] or [])[:4]]
+        calendar = (responses["calendar"][0] or {}).get("earningsCalendar", [])
+        upcoming = sorted((row for row in calendar if row.get("date") and row.get("epsActual") is None), key=lambda row: row["date"])
+        if upcoming:
+            row = upcoming[0]
+            result["nextEarnings"] = {
+                "date": row.get("date"), "hour": row.get("hour") or "",
+                "quarter": row.get("quarter"), "year": row.get("year"),
+                "epsEstimate": safe_number(row.get("epsEstimate")),
+                "revenueEstimate": safe_number(row.get("revenueEstimate")),
+            }
+        result["provider"] = "Finnhub free endpoints + Yahoo Finance history"
+    with RESEARCH_CACHE_LOCK:
+        RESEARCH_CACHE[cache_key] = (time.time(), result)
+    return result
+
+
 class Handler(SimpleHTTPRequestHandler):
-    server_version = "TangTerminal/3.2.1"
+    server_version = "TangTerminal/3.3.0"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
@@ -714,19 +958,40 @@ class Handler(SimpleHTTPRequestHandler):
             params = urllib.parse.parse_qs(parsed.query)
             symbol = (params.get("symbol") or [""])[0][:24]
             chart_range = (params.get("range") or ["3mo"])[0]
+            provider = (params.get("provider") or ["yahoo"])[0].lower()
             if not symbol:
                 self.send_json({"error": "Symbol is required"}, 400)
                 return
             try:
-                chart = fetch_chart(symbol, chart_range)
+                chart = fetch_twelve_chart(symbol, chart_range) if provider == "twelve" else fetch_chart(symbol, chart_range)
                 try:
                     chart["news"] = fetch_news(symbol)
                 except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError):
                     chart["news"] = []
-                chart["provider"] = "Yahoo Finance"
+                if provider != "twelve":
+                    chart["provider"] = "Yahoo Finance"
+                chart["chartFeeds"] = {
+                    "yahoo": {"configured": True, "label": "Yahoo · global"},
+                    "twelve": {"configured": bool(TWELVE_DATA_KEY), "label": "Twelve Data · free live"},
+                }
                 self.send_json(chart)
+            except PermissionError as error:
+                self.send_json({
+                    "error": "Free live candle feed is not configured", "detail": str(error),
+                    "provider": "Twelve Data Basic", "configured": False,
+                }, 409)
             except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError) as error:
                 self.send_json({"error": "Market data unavailable", "detail": str(error)}, 503)
+            return
+        if parsed.path == "/api/research":
+            symbol = (urllib.parse.parse_qs(parsed.query).get("symbol") or [""])[0][:24]
+            if not symbol:
+                self.send_json({"error": "Symbol is required"}, 400)
+                return
+            try:
+                self.send_json(fetch_instrument_research(symbol))
+            except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError) as error:
+                self.send_json({"error": "Research data unavailable", "detail": str(error)}, 503)
             return
         if parsed.path == "/api/intelligence":
             self.send_json(fetch_intelligence())

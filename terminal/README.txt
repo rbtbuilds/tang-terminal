@@ -1,4 +1,4 @@
-TANG TERMINAL 3.2.1
+TANG TERMINAL 3.3.0
 ===================
 
 FASTEST START
@@ -17,6 +17,11 @@ height persist per page; select the height label to return to automatic height.
 
 The Shipping Map works in demo mode offline. Live AIS uses the server-only key
 in .tang-terminal.env. Never share a configured release ZIP publicly.
+
+Open a ticker for OHLC candles, past performance, next earnings, analyst counts,
+fundamentals, peers, technicals, scenarios, and news. Yahoo works with no key;
+the optional Twelve Data Basic switch uses a free key stored server-side in
+.tang-twelvedata.env. See the main README for quota and coverage limits.
 
 For full setup, Ollama, data, privacy, and development details, read README.md
 in the project root.

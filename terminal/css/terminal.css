@@ -569,7 +569,7 @@ table.quote-table tr:focus-visible td:first-child strong { color: var(--accent);
 .detail-drawer {
   position: absolute;
   inset: 0 0 0 auto;
-  width: min(920px, 94vw);
+  width: min(1120px, 96vw);
   display: flex;
   flex-direction: column;
   background: #080e0a;
@@ -666,6 +666,9 @@ table.quote-table tr:focus-visible td:first-child strong { color: var(--accent);
 .detail-provenance { text-align: right; color: var(--fg-dim); font-size: var(--fs-xs); line-height: 1.5; }
 .detail-provenance span { color: var(--amber); }
 .range-bar { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.feed-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-bottom: 7px; }
+.feed-switch > span { color: var(--fg-faint); font-size: var(--fs-xs); letter-spacing: 1px; margin-right: 3px; }
+.feed-notice { margin: 0 0 8px; padding: 7px 9px; border: 1px solid #59480f; background: #171405; color: var(--amber); font-size: var(--fs-xs); line-height: 1.45; }
 .chart-card, .research-card {
   border: 1px solid var(--border);
   background: var(--bg-panel);
@@ -676,10 +679,12 @@ table.quote-table tr:focus-visible td:first-child strong { color: var(--accent);
 .chart-legend { display: flex; gap: 18px; color: var(--accent); font-size: var(--fs-xs); padding: 4px 4px 0; }
 .chart-legend span:last-child { margin-left: auto; color: var(--fg-faint); }
 .research-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.research-grid-wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .research-card { padding: 11px 12px; }
 .research-card h3 { color: var(--fg-dim); font-size: var(--fs-xs); letter-spacing: 1.2px; margin: 0 0 10px; }
 .metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--border); }
 .metric { display: flex; justify-content: space-between; gap: 8px; background: var(--bg-panel); padding: 6px 7px; }
+.metric > * { min-width: 0; overflow-wrap: anywhere; }
 .metric span { color: var(--fg-faint); font-size: var(--fs-xs); }
 .metric strong { font-weight: normal; font-variant-numeric: tabular-nums; }
 .signal { margin-top: 10px; font-weight: bold; letter-spacing: .8px; }
@@ -695,6 +700,20 @@ table.quote-table tr:focus-visible td:first-child strong { color: var(--accent);
 .news-item:hover { border-color: var(--border-bright); color: var(--accent); }
 .news-title { line-height: 1.35; }
 .news-meta { color: var(--fg-faint); font-size: var(--fs-xs); }
+.event-callout { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; padding: 8px 9px; border-left: 2px solid var(--amber); background: var(--bg-inset); }
+.event-callout strong { grid-row: 1 / 3; align-self: center; color: var(--amber); font-size: var(--fs-md); }
+.event-callout span { color: var(--fg-dim); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.earnings-history { margin-top: 7px; }
+.earnings-history-row { display: grid; grid-template-columns: minmax(88px, 1fr) repeat(3, minmax(66px, auto)); gap: 8px; padding: 5px 3px; border-top: 1px solid var(--border); font-size: var(--fs-xs); }
+.earnings-history-row span { color: var(--fg-dim); min-width: 0; overflow-wrap: anywhere; }
+.consensus-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.consensus-strip span { display: grid; gap: 3px; padding: 7px 5px; background: var(--bg-inset); border: 1px solid var(--border); color: var(--fg-dim); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.consensus-strip b { font-size: var(--fs-md); }
+.peers-card { margin-bottom: 10px; }
+.peer-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.peer-btn { padding: 6px 9px; border: 1px solid var(--border); background: var(--bg-inset); color: var(--accent); font: inherit; font-size: var(--fs-xs); cursor: pointer; }
+.peer-btn:hover { border-color: var(--border-bright); background: var(--highlight); }
+.detail-empty.compact { padding: 12px 5px; }
 .detail-loading, .detail-error, .detail-empty { color: var(--fg-dim); padding: 30px 10px; text-align: center; }
 .detail-error strong { color: var(--red); }
 .retry-btn { margin-top: 12px; }
@@ -741,6 +760,8 @@ table.quote-table tr:focus-visible td:first-child strong { color: var(--accent);
   .detail-summary { align-items: flex-start; flex-direction: column; }
   .detail-provenance { text-align: left; }
   .research-grid, .news-list { grid-template-columns: 1fr; }
+  .consensus-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .earnings-history-row { grid-template-columns: 1fr 1fr; }
   .scenario div { grid-template-columns: 1fr; }
   .energy-spreads { grid-template-columns: 1fr; }
   #price-chart { height: 220px; }

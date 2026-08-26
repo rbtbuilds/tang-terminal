@@ -15,7 +15,7 @@ The browser owns presentation and device-local preferences. The local server own
 - `symbols.js` adds provider-discovered instruments to that canonical index.
 - `data/adapter.js` normalizes demo and connected quote updates.
 - `widgets/` contains isolated renderers. A widget exposes `create()` and may expose `update(quotes)` plus cleanup handles.
-- `details.js` owns on-demand chart, technical, scenario, provenance and news rendering.
+- `details.js` owns candle-feed selection, one-minute live refresh, performance, earnings, analyst/fundamental context, technicals, scenarios, provenance and news rendering.
 - `intelligence.js` owns the single cached browser request for overview news and disclosure widgets.
 - `earnings.js` owns demo/live earnings loading for the tracked equity and watchlist universe.
 - `ollama.js` owns the local-model request contract and evidence-constrained system prompt.
@@ -44,7 +44,8 @@ The watchlist rail, command field and collapsible local-AI dock remain available
 
 - `/api/quotes` — batched, cached normalized quote indications.
 - `/api/search` — provider-supported security discovery.
-- `/api/instrument` — OHLCV, provenance and recent headline metadata.
+- `/api/instrument` — normalized Yahoo or optional Twelve Data OHLCV, provenance and recent headline metadata.
+- `/api/research` — cached Finnhub earnings/recommendation/metric/peer context plus locally calculated Yahoo historical performance.
 - `/api/intelligence` — cached, normalized news, SEC Form 4 and Congressional disclosure briefing.
 - `/api/earnings` — optional Finnhub calendar, consensus estimates and recent-surprise context; credentials remain server-side.
 - `/api/ais/positions` — bounded, key-free browser snapshot of recent AIS positions.
@@ -55,3 +56,5 @@ The AIS bridge implements the RFC 6455 client handshake with Python's standard l
 ## Failure behavior
 
 Every upstream feature has an explicit local fallback. Quotes remain blank rather than fabricated in connected mode. AIS shows labelled demo vessels until authenticated live positions arrive. Instrument research reports provider failure without closing the drawer. Ollama failure affects only the assistant. Corrupt browser storage restores defaults.
+
+Twelve Data requests use an `Authorization` header, are cached for 55 seconds per symbol/range, and occur only while its feed is selected. Finnhub research calls run concurrently, cache for 15 minutes, and are restricted to compatible US equity symbols. Neither provider credential enters a browser URL or response.

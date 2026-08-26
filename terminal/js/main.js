@@ -103,7 +103,7 @@
     settings.fontScale = Math.max(0.85, Math.min(1.45, Math.round(next * 20) / 20));
     document.documentElement.style.setProperty("--font-scale", settings.fontScale);
     document.getElementById("font-scale").textContent = Math.round(settings.fontScale * 100) + "%";
-    TT.store.saveSettings(settings);
+    settings = TT.store.updateSettings({ fontScale: settings.fontScale });
     window.requestAnimationFrame(function () { TT.grid.refresh(canvas); });
   }
 
@@ -158,14 +158,14 @@
     var open = settings.aiDockOpen !== false; var assistant = TT.widgets.assistant.create();
     assistant.classList.add("dock-assistant-panel"); content.appendChild(assistant);
     function apply() { dock.classList.toggle("collapsed", !open); toggle.textContent = open ? "COLLAPSE ↓" : "OPEN TANG AI ↑"; toggle.setAttribute("aria-expanded", String(open)); }
-    toggle.addEventListener("click", function () { open = !open; settings.aiDockOpen = open; TT.store.saveSettings(settings); apply(); });
+    toggle.addEventListener("click", function () { open = !open; settings.aiDockOpen = open; settings = TT.store.updateSettings({ aiDockOpen: open }); apply(); });
     apply();
   }
 
   var initialWorkspace = window.location.hash.slice(1);
   if (pageCopy[initialWorkspace]) TT.store.setActiveWorkspace(initialWorkspace);
   applyFontScale(Number(settings.fontScale) || 1); mountWorkspace(); mountAssistantDock(); startAdapter();
-  document.getElementById("btn-toggle-mode").addEventListener("click", function () { settings.dataMode = settings.dataMode === "demo" ? "live" : "demo"; TT.store.saveSettings(settings); TT.earnings.clear(); startAdapter(); });
+  document.getElementById("btn-toggle-mode").addEventListener("click", function () { settings.dataMode = settings.dataMode === "demo" ? "live" : "demo"; settings = TT.store.updateSettings({ dataMode: settings.dataMode }); TT.earnings.clear(); startAdapter(); });
   document.getElementById("btn-reset-layout").addEventListener("click", function () { if (window.confirm("Restore this workspace's default panels?")) { TT.store.resetLayout(); mountWorkspace(); } });
   document.getElementById("btn-fullscreen").addEventListener("click", function () { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(function () {}); else document.exitFullscreen().catch(function () {}); });
   document.getElementById("btn-font-down").addEventListener("click", function () { applyFontScale(settings.fontScale - 0.1); });

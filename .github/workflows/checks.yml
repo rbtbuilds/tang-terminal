@@ -30,7 +30,7 @@ jobs:
       - name: Check private files are not tracked
         shell: bash
         run: |
-          if git ls-files | grep -Eq '(^dist/|terminal/\.tang-terminal\.env$)'; then
+          if git ls-files | grep -Eq '(^dist/|terminal/\.tang-(terminal|finnhub|twelvedata)\.env$)'; then
             echo "A private release or local credential file is tracked."
             exit 1
           fi

@@ -2,6 +2,13 @@
 
 All notable changes to TANG Terminal are recorded here.
 
+## 3.3.0 — 2026-08-26
+
+- Added a switchable Twelve Data Basic candle adapter for free real-time US equities/ETFs, forex and crypto, with one-minute refresh, 55-second cache and explicit free-tier limits.
+- Replaced the research line plot with responsive OHLC candles and retained SMA20 overlay and seven ranges.
+- Expanded US equity research with nearest earnings, four reported surprises, analyst recommendation counts, core fundamentals, comparable companies and 1D-to-1Y performance/risk calculations.
+- Kept Twelve Data and Finnhub keys server-side in ignored local files and authentication headers.
+
 ## 3.2.1 — 2026-08-26
 
 - Send Finnhub credentials in the authentication header so keys never enter upstream URLs or request logs.

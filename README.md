@@ -22,7 +22,7 @@ TANG Terminal—**Trading Analytics & Navigation Grid**—is an open-source, ter
 - Persistent collapsible AI dock shared by every workspace
 - Overview briefing with recent news, quote-derived movers, educational setups, and public disclosures
 - Upcoming earnings radar with analyst EPS/revenue consensus and a recent-surprise-history lean
-- Click-through instrument research with seven chart ranges, calculated technicals, educational bull/bear scenarios, and recent headlines
+- Click-through instrument research with switchable OHLC candles, seven ranges, past returns, upcoming earnings, reported surprises, analyst-count consensus, fundamentals, peers, technicals, educational scenarios, and recent headlines
 - Persistent watchlist panel; pin or unpin an instrument from its research drawer
 - Global security search for provider-supported LSE, NYSE, Nasdaq and other exchange-listed instruments
 - Five routed workspaces: Overview, Markets, Energy & Commodities, Shipping Map, and Research
@@ -94,6 +94,18 @@ Demo mode includes a clearly simulated earnings board. Live upcoming earnings us
 
 The free adapter covers US-listed tracked equities and watchlist symbols found in the provider calendar over the next 28 days; international calendar access depends on Finnhub entitlement. EPS and revenue are non-GAAP analyst consensus estimates. `BEAT-LEAN`, `MIXED`, and `MISS-LEAN` use only the last four available surprise outcomes; they are deliberately weak historical heuristics, not model certainty, analyst advice, or a substitute for guidance and fundamentals.
 
+The same key enriches a US equity's expanded research sheet with the nearest returned earnings event, last four reported surprises, monthly recommendation counts, basic standardized metrics and a comparable-company set. Finnhub's free recommendation endpoint supplies counts—not named-bank actions or price targets—so TANG does not imply either.
+
+## Free live candle option
+
+Yahoo remains the zero-configuration global candle source. For a free, auto-refreshing US equity/ETF, forex, and crypto option:
+
+1. Create a **Basic (Free)** key at [Twelve Data](https://twelvedata.com/pricing).
+2. Create `terminal/.tang-twelvedata.env` containing `TANG_TWELVEDATA_API_KEY=your_key`.
+3. Restart TANG, open an instrument, and switch **CANDLES** to **TWELVE DATA · FREE LIVE**.
+
+The Basic plan currently permits 8 API credits per minute and 800 per day. TANG requests one symbol at a time, caches each range for 55 seconds, and refreshes an open live chart once per minute. The default real-time US feed uses licensing-free venues representing only a small portion of consolidated US trading volume, so it is useful for monitoring but is not a full-depth or execution-grade NBBO feed. Global equities outside the free coverage remain on Yahoo.
+
 ## Using the terminal
 
 - Select **EDIT LAYOUT** to reveal move, resize, and remove controls.
@@ -105,6 +117,7 @@ The free adapter covers US-listed tracked equities and watchlist symbols found i
 - Select **FULLSCREEN** to enter a borderless browser canvas. Move the browser window to the desired display first, then enter fullscreen. Browser security requires this user gesture.
 - Open an instrument and select **+ WATCHLIST** to pin it to the persistent watchlist panel. Select **★ WATCHING** or the row's × button to remove it.
 - Select **+ TICKER**, search by company or provider ticker, confirm the exchange, and add the result. London listings normally use the `.L` suffix (for example `BP.L`). Custom instruments persist locally and receive the same chart, technical and news drawer.
+- In an expanded ticker, switch between **YAHOO · GLOBAL** and the optional **TWELVE DATA · FREE LIVE** candle feed. The selection persists locally. Twelve Data refreshes once per minute while the drawer remains open.
 - Switch among **OVERVIEW**, **MARKETS**, **ENERGY & COMMODITIES**, **SHIPPING MAP**, and **RESEARCH**. Each has an independent persistent layout and URL hash.
 - Select **+ WIDGET** to add panels to the current workspace. Use a panel's × control to remove it without deleting its data.
 - Use **A−** and **A+** to scale terminal typography between 85% and 145%.
@@ -117,9 +130,9 @@ Layout and preferences are stored only in the browser's `localStorage`. Differen
 
 `LiveAdapter` requests public chart-market data from Yahoo Finance through the bundled local server once per minute. Dashboard quotes are retrieved in batches—rather than one upstream request per instrument—to keep startup and page switching responsive. Intraday percentage changes use the provider's previous close rather than the first bar in a multi-day range. Research views distinguish observation and retrieval times, currency, exchange, provider and documented delay. For example, Yahoo documents LSE data as 20 minutes delayed and many NYMEX/COMEX futures as 30 minutes delayed; TANG preserves those labels instead of describing the whole connection as real-time. Availability and symbol coverage depend on the upstream service; a failed request is shown as unavailable and does not break the dashboard. Market-cap values are illustrative reference values, not live quotes. Commodity panels use front-month exchange-traded futures proxies; tanker panels show listed operator equities rather than freight rates.
 
-The optional earnings adapter requests Finnhub's upcoming calendar once per hour and adds recent reported-surprise context for at most 12 tracked events. Missing credentials, estimates, history, or provider coverage remain visibly unavailable rather than being inferred.
+The optional earnings adapter requests Finnhub's upcoming calendar once per hour and adds recent reported-surprise context for at most 12 tracked events. The instrument sheet caches its separate Finnhub research bundle for 15 minutes. Missing credentials, estimates, history, or provider coverage remain visibly unavailable rather than being inferred.
 
-The technical signal is calculated locally from the selected range using SMA20, SMA50, RSI14, ATR14, and recent support/resistance. Bull and bear scenarios are mechanical educational examples—not individualized recommendations or executable orders. News headlines are fetched on demand and link to the original publisher through Yahoo Finance search.
+Candles are normalized to OHLCV locally. Past-return, drawdown and annualized-volatility fields are reproducible calculations from one year of Yahoo daily bars; they remain independent of the selected chart feed. The technical signal is calculated locally from the selected range using SMA20, SMA50, RSI14, ATR14, and recent support/resistance. Bull and bear scenarios are mechanical educational examples—not individualized recommendations or executable orders. News headlines are fetched on demand and link to the original publisher through Yahoo Finance search.
 
 The Overview disclosure board reads open-market purchase/sale codes from official SEC Form 4 filings. Congressional rows use CongressInvests as a normalizer but retain links to official disclosures; the widget exposes a stale-provider warning and notes the statutory reporting lag. These are filing monitors, not complete order-flow feeds.
 
@@ -143,7 +156,7 @@ terminal/
   js/grid.js              Collision-free auto layout and pointer resizing
   js/ollama.js            Local model client
   js/main.js              Application orchestration
-  local-server.py         Static, market, AISStream, and Ollama bridges
+  local-server.py         Static, market/research, AISStream, and Ollama bridges
   install-* / launch-*    Desktop installers and launchers
 ```
 
@@ -156,7 +169,7 @@ The durable product direction is captured in [docs/PROJECT-STATE.md](docs/PROJEC
 - Storage access, fullscreen requests, network calls, and model calls fail gracefully.
 - User prompts are sent only to the configured local Ollama endpoint.
 - The local server binds to `127.0.0.1`, not the network.
-- Market and AIS credentials remain in the ignored server-only `.tang-terminal.env`; endpoints never return them.
+- Market and AIS credentials remain in ignored server-only `.tang-*.env` files; authentication headers and API responses never return them.
 - The demo experience works entirely offline.
 
 ## Development checks

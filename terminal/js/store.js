@@ -57,6 +57,7 @@
 
   var DEFAULT_SETTINGS = {
     dataMode: "demo",                 // "demo" | "live"
+    chartProvider: "yahoo",           // "yahoo" | "twelve"
     fontScale: 1,
     aiDockOpen: true,
     ollama: {
@@ -171,6 +172,15 @@
 
     saveSettings: function (settings) {
       writeJSON(SETTINGS_KEY, settings);
+    },
+
+    updateSettings: function (patch) {
+      var current = this.getSettings();
+      Object.keys(patch || {}).forEach(function (key) {
+        current[key] = key === "ollama" ? Object.assign({}, current.ollama, patch.ollama || {}) : patch[key];
+      });
+      writeJSON(SETTINGS_KEY, current);
+      return current;
     },
 
     getWatchlist: function () {

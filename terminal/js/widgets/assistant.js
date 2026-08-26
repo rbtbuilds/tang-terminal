@@ -24,7 +24,9 @@
           list = null; listType = ""; if (!line.trim()) return; var p = document.createElement("p"); addInline(p, line); target.appendChild(p);
         });
       }
-      function save() { settings.ollama.host = host.value.trim() || "http://localhost:11434"; settings.ollama.model = model.value; TT.store.saveSettings(settings); }
+      function save() {
+        settings = TT.store.updateSettings({ ollama: { host: host.value.trim() || "http://localhost:11434", model: model.value } });
+      }
       function connect(quiet) {
         settings.ollama.host = host.value.trim() || "http://localhost:11434";
         return TT.ollama.listModels(settings.ollama).then(function (models) {

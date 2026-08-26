@@ -11,4 +11,5 @@ dist/
 # Local credentials (included only in explicitly requested private release ZIPs)
 terminal/.tang-terminal.env
 terminal/.tang-finnhub.env
+terminal/.tang-twelvedata.env
 terminal/config.local.json

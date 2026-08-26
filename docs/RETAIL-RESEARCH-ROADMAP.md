@@ -10,10 +10,10 @@ TANG aims to be an open-source research workbench, not a signal-selling product.
 | Movers | universe, price, change, observation time, delay | quote adapter | shipped for loaded universe |
 | Insider activity | issuer, owner, side, shares, price, transaction/filing dates | SEC Form 4 | shipped |
 | Congress activity | member, asset, range, action, transaction/disclosure dates, official filing | House/Senate disclosures | shipped via freshness-labelled normalizer |
-| Fundamentals | revenue, margins, cash flow, leverage, shares, reporting period | SEC XBRL / issuer filings | next |
+| Fundamentals | revenue, margins, growth, valuation, reporting period | attributed provider / SEC XBRL | Finnhub summary shipped; filing-backed depth next |
 | Events | earnings, dividends, splits, economic calendar | exchange/issuer or attributed provider | earnings shipped; other events next |
 | Discovery screener | liquidity, momentum, relative volume, trend, valuation, event proximity | normalized quotes + fundamentals | next |
-| Analyst consensus | strong buy/buy/hold/sell counts, coverage, period | licensed provider | adapter-ready |
+| Analyst consensus | strong buy/buy/hold/sell counts, coverage, period | licensed provider | Finnhub counts shipped |
 | Rating actions | institution, action, prior/new rating, target, currency, date | licensed provider | adapter-ready |
 | Institutional holdings | filer, security, value, period, filing date | SEC 13F | planned |
 | Options/unusual activity | contract, volume, OI, IV, timestamp, venue scope | licensed options feed | planned |
@@ -40,7 +40,7 @@ The following endpoints were exercised against the project's free test entitleme
 | Insider transactions | available | Broader-market supplement to official SEC Form 4 parsing |
 | Insider sentiment | available | Instrument drawer with methodology and monthly period |
 | Company peers | available | Comparable-company research panel |
-| Earnings calendar and four-quarter surprises | available for US calendar | Overview Earnings Radar |
+| Earnings calendar and four-quarter surprises | available for US calendar | Overview Earnings Radar and instrument sheet |
 | International earnings calendar | not enabled | Show entitlement notice; never silently omit scope |
 | Consensus price targets | not enabled | Premium adapter only |
 | Named upgrades/downgrades | not enabled | Premium adapter only |
@@ -48,9 +48,9 @@ The following endpoints were exercised against the project's free test entitleme
 | Economic calendar | not enabled | Use another attributed provider or upgraded entitlement |
 | Institutional ownership/portfolios | premium in documentation | Prefer SEC 13F for an open-data implementation |
 
-Recommended implementation order for the available feeds: recommendation trends and basic financials in the instrument drawer, peer comparison, watchlist-specific company news, then an IPO calendar. Existing official SEC insider data remains the primary US disclosure source.
+Recommendation trends, basic financials and peer comparison are now implemented in the instrument drawer. The next available-feed priorities are watchlist-specific company news and an IPO calendar. Existing official SEC insider data remains the primary US disclosure source.
 
-Keys belong only in ignored `.tang-terminal.env` entries and are consumed by the local server. The browser receives normalized results plus provenance, never credentials.
+Keys belong only in ignored `.tang-*.env` entries and are consumed by the local server. The browser receives normalized results plus provenance, never credentials.
 
 ## Required UX rules
 
@@ -64,8 +64,8 @@ Keys belong only in ignored `.tang-terminal.env` entries and are consumed by the
 
 ## Suggested implementation sequence
 
-1. Add SEC company-facts cards and an earnings/event calendar to instrument research.
-2. Define a server-side `ResearchAdapter` response schema with capability flags.
-3. Add one optional analyst adapter, beginning with Finnhub recommendation counts.
-4. Add a reproducible discovery screener over the loaded universe; expose every filter.
+1. Add SEC company-facts depth and more event types to instrument research.
+2. Formalize the shipped `/api/research` response schema with capability flags and provider tests.
+3. Add a reproducible discovery screener over the loaded universe; expose every filter.
+4. Add watchlist-specific company news and an IPO calendar.
 5. Add 13F change tracking, followed later by licensed options-flow data.
