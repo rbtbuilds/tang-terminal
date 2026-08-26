@@ -11,7 +11,7 @@ TANG aims to be an open-source research workbench, not a signal-selling product.
 | Insider activity | issuer, owner, side, shares, price, transaction/filing dates | SEC Form 4 | shipped |
 | Congress activity | member, asset, range, action, transaction/disclosure dates, official filing | House/Senate disclosures | shipped via freshness-labelled normalizer |
 | Fundamentals | revenue, margins, cash flow, leverage, shares, reporting period | SEC XBRL / issuer filings | next |
-| Events | earnings, dividends, splits, economic calendar | exchange/issuer or attributed provider | next |
+| Events | earnings, dividends, splits, economic calendar | exchange/issuer or attributed provider | earnings shipped; other events next |
 | Discovery screener | liquidity, momentum, relative volume, trend, valuation, event proximity | normalized quotes + fundamentals | next |
 | Analyst consensus | strong buy/buy/hold/sell counts, coverage, period | licensed provider | adapter-ready |
 | Rating actions | institution, action, prior/new rating, target, currency, date | licensed provider | adapter-ready |

@@ -21,6 +21,7 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -41,6 +42,7 @@ def load_local_environment() -> None:
 load_local_environment()
 OLLAMA = os.environ.get("TANG_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 AIS_KEY = os.environ.get("TANG_AISSTREAM_API_KEY", "").strip()
+FINNHUB_KEY = os.environ.get("TANG_FINNHUB_API_KEY", "").strip()
 RANGE_INTERVALS = {
     "1d": "5m", "5d": "15m", "1mo": "1h", "3mo": "1d",
     "6mo": "1d", "1y": "1d", "5y": "1wk",
@@ -49,6 +51,8 @@ QUOTE_CACHE: dict[str, tuple[float, dict[str, dict]]] = {}
 QUOTE_CACHE_LOCK = threading.Lock()
 INTELLIGENCE_CACHE: tuple[float, dict] | None = None
 INTELLIGENCE_CACHE_LOCK = threading.Lock()
+EARNINGS_CACHE: dict[str, tuple[float, dict]] = {}
+EARNINGS_CACHE_LOCK = threading.Lock()
 SEC_USER_AGENT = os.environ.get(
     "TANG_SEC_USER_AGENT", "TANG Terminal local research tang-terminal@example.invalid"
 )
@@ -561,8 +565,90 @@ def fetch_intelligence() -> dict:
     return payload
 
 
+def fetch_finnhub_json(path: str, params: dict[str, str]) -> dict | list:
+    query = urllib.parse.urlencode({**params, "token": FINNHUB_KEY})
+    payload = json.loads(fetch_text(f"https://finnhub.io/api/v1/{path}?{query}"))
+    if isinstance(payload, dict) and payload.get("error"):
+        raise ValueError(str(payload["error"]))
+    return payload
+
+
+def earnings_history(symbol: str) -> dict:
+    """Return a deliberately simple recent surprise-history heuristic."""
+    payload = fetch_finnhub_json("stock/earnings", {"symbol": symbol, "limit": "4"})
+    rows = payload if isinstance(payload, list) else []
+    surprises = [float(row["surprise"]) for row in rows if row.get("surprise") is not None]
+    if not surprises:
+        return {"historyQuarters": 0, "recentBeatRate": None, "lean": "NO EDGE"}
+    beat_rate = sum(1 for surprise in surprises if surprise > 0) / len(surprises)
+    lean = "BEAT-LEAN" if beat_rate >= 0.67 else "MISS-LEAN" if beat_rate <= 0.33 else "MIXED"
+    return {
+        "historyQuarters": len(surprises),
+        "recentBeatRate": round(beat_rate * 100),
+        "lean": lean,
+    }
+
+
+def fetch_earnings(symbols: list[str]) -> dict:
+    """Fetch upcoming analyst estimates and recent-surprise context from Finnhub."""
+    if not FINNHUB_KEY:
+        return {
+            "configured": False, "provider": "Finnhub", "events": [],
+            "notice": "Set TANG_FINNHUB_API_KEY in .tang-terminal.env to enable live earnings.",
+        }
+    normalized = sorted({symbol.upper() for symbol in symbols if symbol})[:80]
+    cache_key = ",".join(normalized)
+    with EARNINGS_CACHE_LOCK:
+        cached = EARNINGS_CACHE.get(cache_key)
+    if cached and time.time() - cached[0] < 3600:
+        return cached[1]
+    start = datetime.now(timezone.utc).date()
+    end = start + timedelta(days=28)
+    calendar = fetch_finnhub_json("calendar/earnings", {
+        "from": start.isoformat(), "to": end.isoformat(), "international": "true",
+    })
+    raw_events = calendar.get("earningsCalendar") if isinstance(calendar, dict) else []
+    requested = set(normalized)
+    events = []
+    for row in raw_events or []:
+        symbol = str(row.get("symbol") or "").upper()
+        if requested and symbol not in requested:
+            continue
+        if row.get("epsActual") is not None or not row.get("date"):
+            continue
+        events.append({
+            "symbol": symbol,
+            "date": row.get("date"),
+            "hour": row.get("hour") or "",
+            "quarter": row.get("quarter"),
+            "year": row.get("year"),
+            "epsEstimate": row.get("epsEstimate"),
+            "revenueEstimate": row.get("revenueEstimate"),
+        })
+    events.sort(key=lambda row: (row["date"], row["hour"], row["symbol"]))
+    events = events[:12]
+
+    def attach_history(event: dict) -> dict:
+        try:
+            event.update(earnings_history(event["symbol"]))
+        except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError):
+            event.update({"historyQuarters": 0, "recentBeatRate": None, "lean": "NO EDGE"})
+        return event
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        events = list(pool.map(attach_history, events))
+    result = {
+        "configured": True, "provider": "Finnhub", "retrievedAt": int(time.time()),
+        "from": start.isoformat(), "to": end.isoformat(), "events": events,
+        "notice": "EPS/revenue are analyst estimates; the lean uses only recent surprise history.",
+    }
+    with EARNINGS_CACHE_LOCK:
+        EARNINGS_CACHE[cache_key] = (time.time(), result)
+    return result
+
+
 class Handler(SimpleHTTPRequestHandler):
-    server_version = "TangTerminal/3.1.1"
+    server_version = "TangTerminal/3.2.0"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
@@ -635,6 +721,17 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/intelligence":
             self.send_json(fetch_intelligence())
+            return
+        if parsed.path == "/api/earnings":
+            raw_symbols = (urllib.parse.parse_qs(parsed.query).get("symbols") or [""])[0]
+            symbols = [symbol.strip()[:24] for symbol in raw_symbols.split(",") if symbol.strip()]
+            try:
+                self.send_json(fetch_earnings(symbols))
+            except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError) as error:
+                self.send_json({
+                    "configured": bool(FINNHUB_KEY), "provider": "Finnhub", "events": [],
+                    "error": "Earnings feed unavailable", "detail": str(error),
+                }, 503)
             return
         if parsed.path == "/api/ais/positions":
             self.send_json(AIS_MONITOR.snapshot())

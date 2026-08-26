@@ -12,7 +12,8 @@
   var SETTINGS_KEY = PREFIX + "settings.v1";
   var WATCHLIST_KEY = PREFIX + "watchlist.v1";
   var CUSTOM_SYMBOLS_KEY = PREFIX + "symbols.v1";
-  var WORKSPACES_KEY = PREFIX + "workspaces.v2";
+  var LEGACY_WORKSPACES_KEY = PREFIX + "workspaces.v2";
+  var WORKSPACES_KEY = PREFIX + "workspaces.v3";
 
   /** Default widget layout: order + size for every known widget id. */
   var DEFAULT_LAYOUT = [
@@ -21,6 +22,7 @@
     { id: "heatmap", size: "md" },
     { id: "news", size: "md" },
     { id: "action", size: "md" },
+    { id: "earnings", size: "lg" },
     { id: "disclosures", size: "lg" }
   ];
 
@@ -98,6 +100,18 @@
   function workspaceState() {
     var saved = readJSON(WORKSPACES_KEY, null);
     if (saved && saved.layouts && saved.active) return saved;
+    var previous = readJSON(LEGACY_WORKSPACES_KEY, null);
+    if (previous && previous.layouts && previous.active) {
+      var migrated = { active: previous.active, layouts: {} };
+      WORKSPACES.forEach(function (workspace) { migrated.layouts[workspace.id] = copyLayout(previous.layouts[workspace.id] || DEFAULT_LAYOUTS[workspace.id]); });
+      var overview = migrated.layouts.overview;
+      if (!overview.some(function (entry) { return entry.id === "earnings"; })) {
+        var disclosureIndex = overview.findIndex(function (entry) { return entry.id === "disclosures"; });
+        overview.splice(disclosureIndex < 0 ? overview.length : disclosureIndex, 0, { id: "earnings", size: "lg", widthCols: null, heightPx: null });
+      }
+      writeJSON(WORKSPACES_KEY, migrated);
+      return migrated;
+    }
     var legacy = readJSON(LAYOUT_KEY, null);
     return {
       active: "overview",

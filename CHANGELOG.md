@@ -2,6 +2,13 @@
 
 All notable changes to TANG Terminal are recorded here.
 
+## 3.2.0 — 2026-08-26
+
+- Added the Overview earnings radar with upcoming event timing and analyst EPS/revenue estimates.
+- Added an optional server-side Finnhub adapter with one-hour caching and no browser credential exposure.
+- Added a plainly labelled beat/miss lean derived from at most four recent surprise outcomes.
+- Added a simulated offline/demo earnings calendar and a v2-to-v3 workspace migration that preserves existing layouts.
+
 ## 3.1.1 — 2026-08-26
 
 - Added continuous 3–12-column widget width resizing with per-workspace persistence.

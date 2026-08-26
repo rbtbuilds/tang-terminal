@@ -19,7 +19,7 @@ python3 terminal/local-server.py --port 8787
 
 Open <http://127.0.0.1:8787>. You can also open `terminal/index.html` directly to test offline demo mode.
 
-Copy `terminal/.tang-terminal.env.example` to `.tang-terminal.env` only when testing optional local credentials. The real file is ignored by Git.
+Copy `terminal/.tang-terminal.env.example` to `.tang-terminal.env` only when testing optional local credentials such as AISStream or Finnhub. The real file is ignored by Git.
 
 ## Code expectations
 

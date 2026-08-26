@@ -30,6 +30,7 @@
     { id: "shipping", title: "Global Shipping Map", description: "Local world map with optional live AIS vessel positions", size: "lg" },
     { id: "news", title: "Market News", description: "Recent cross-asset publisher headlines", size: "md" },
     { id: "action", title: "Market Action", description: "Recent movers and mechanical educational setups", size: "md" },
+    { id: "earnings", title: "Earnings Radar", description: "Upcoming reports, analyst estimates and surprise-history lean", size: "lg" },
     { id: "disclosures", title: "Disclosure Monitor", description: "SEC insider and Congressional transaction filings", size: "lg" }
   ];
 
@@ -148,7 +149,7 @@
     refreshData: startAdapter,
     marketSnapshot: function () {
       var timestamps = Object.keys(quotes).map(function (symbol) { return quotes[symbol].timestamp || 0; }); var latest = Math.max.apply(Math, timestamps.concat([0]));
-      return "Mode: " + settings.dataMode.toUpperCase() + "\nProvider: " + (settings.dataMode === "live" ? "Yahoo Finance; exchange-dependent real-time or delayed indications" : "local simulation; not market data") + "\nLatest observation: " + (latest ? new Date(latest * 1000).toISOString() : new Date().toISOString()) + "\nCoverage limits: No fund flows, positions, options flow, analyst consensus, or live freight rates. Commodity values are front-month futures proxies.\n" + Object.keys(quotes).map(function (symbol) { var quote = quotes[symbol]; var instrument = TT.universe.index[symbol] || { name: symbol }; var delay = quote.delayMinutes == null ? "delay unknown" : quote.delayMinutes ? quote.delayMinutes + "m delayed" : "real-time indicated"; return symbol + " (" + instrument.name + ") " + quote.price.toFixed(quote.digits) + " " + (quote.change >= 0 ? "+" : "") + quote.change.toFixed(2) + "% | " + delay + " | observed " + (quote.timestamp ? new Date(quote.timestamp * 1000).toISOString() : "unknown"); }).join("\n") + "\n\n" + TT.intelligence.snapshotText();
+      return "Mode: " + settings.dataMode.toUpperCase() + "\nProvider: " + (settings.dataMode === "live" ? "Yahoo Finance; exchange-dependent real-time or delayed indications" : "local simulation; not market data") + "\nLatest observation: " + (latest ? new Date(latest * 1000).toISOString() : new Date().toISOString()) + "\nCoverage limits: No fund flows, positions, options flow, broad analyst ratings, or live freight rates. Commodity values are front-month futures proxies.\n" + Object.keys(quotes).map(function (symbol) { var quote = quotes[symbol]; var instrument = TT.universe.index[symbol] || { name: symbol }; var delay = quote.delayMinutes == null ? "delay unknown" : quote.delayMinutes ? quote.delayMinutes + "m delayed" : "real-time indicated"; return symbol + " (" + instrument.name + ") " + quote.price.toFixed(quote.digits) + " " + (quote.change >= 0 ? "+" : "") + quote.change.toFixed(2) + "% | " + delay + " | observed " + (quote.timestamp ? new Date(quote.timestamp * 1000).toISOString() : "unknown"); }).join("\n") + "\n\n" + TT.intelligence.snapshotText() + "\n\n" + TT.earnings.snapshotText();
     }
   };
 
@@ -164,7 +165,7 @@
   var initialWorkspace = window.location.hash.slice(1);
   if (pageCopy[initialWorkspace]) TT.store.setActiveWorkspace(initialWorkspace);
   applyFontScale(Number(settings.fontScale) || 1); mountWorkspace(); mountAssistantDock(); startAdapter();
-  document.getElementById("btn-toggle-mode").addEventListener("click", function () { settings.dataMode = settings.dataMode === "demo" ? "live" : "demo"; TT.store.saveSettings(settings); startAdapter(); });
+  document.getElementById("btn-toggle-mode").addEventListener("click", function () { settings.dataMode = settings.dataMode === "demo" ? "live" : "demo"; TT.store.saveSettings(settings); TT.earnings.clear(); startAdapter(); });
   document.getElementById("btn-reset-layout").addEventListener("click", function () { if (window.confirm("Restore this workspace's default panels?")) { TT.store.resetLayout(); mountWorkspace(); } });
   document.getElementById("btn-fullscreen").addEventListener("click", function () { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(function () {}); else document.exitFullscreen().catch(function () {}); });
   document.getElementById("btn-font-down").addEventListener("click", function () { applyFontScale(settings.fontScale - 0.1); });

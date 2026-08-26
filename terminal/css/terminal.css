@@ -486,6 +486,25 @@ table.quote-table tr:focus-visible td:first-child strong { color: var(--accent);
 .disclosure-row b { text-align: right; font-size: var(--fs-sm); }
 .widget-note { color: var(--fg-faint); font-size: var(--fs-xs); line-height: 1.4; }
 
+/* Earnings calendar: consensus forecasts and a deliberately modest history lean. */
+.earnings-table { display: grid; min-width: min(100%, 680px); }
+.earnings-head, .earnings-row { display: grid; grid-template-columns: minmax(220px, 1.45fr) minmax(155px, .8fr) minmax(160px, .8fr); gap: 10px; align-items: center; }
+.earnings-head { padding: 2px 7px 5px; color: var(--fg-faint); font-size: var(--fs-xs); letter-spacing: .7px; border-bottom: 1px solid var(--border); }
+.earnings-row { width: 100%; border: 0; border-bottom: 1px solid rgba(29,58,38,.55); padding: 7px; background: transparent; color: var(--fg); text-align: left; }
+.earnings-row:hover, .earnings-row:focus-visible { background: rgba(52,245,122,.10); outline: 1px solid var(--border-bright); outline-offset: -1px; }
+.earnings-event, .earnings-forecast, .earnings-lean { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.earnings-event > b { color: var(--amber); font-size: var(--fs-xs); font-weight: normal; }
+.earnings-event > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.earnings-event > strong small { color: var(--fg-dim); font-weight: normal; }
+.earnings-event > em { color: var(--fg-faint); font-size: var(--fs-xs); font-style: normal; }
+.earnings-forecast strong, .earnings-lean strong { font-size: var(--fs-md); }
+.earnings-forecast small, .earnings-lean small { color: var(--fg-faint); font-size: var(--fs-xs); }
+.earnings-setup { min-height: 120px; display: grid; place-items: center; align-content: center; gap: 6px; text-align: center; color: var(--fg-dim); }
+.earnings-setup strong { color: var(--amber); }
+.earnings-setup p { margin: 0; line-height: 1.45; }
+.earnings-setup code { color: var(--fg); user-select: text; }
+.earnings-setup a { color: var(--accent); }
+
 /* Panels grow with typography so data remains contained instead of clipping. */
 .panel[data-widget-id="indices"],
 .panel[data-widget-id="stocks"] { min-height: calc(285px * var(--font-scale)); }
@@ -958,5 +977,8 @@ table.quote-table td { white-space: normal; }
   .page-kicker { display: block; margin-bottom: 2px; }
   .shipping-map-wrap, .shipping-map { min-height: 250px; }
   .action-grid, .disclosure-grid { grid-template-columns: 1fr; }
+  .earnings-head { display: none; }
+  .earnings-row { grid-template-columns: 1fr 1fr; }
+  .earnings-event { grid-column: 1 / -1; }
   .ai-dock { flex-basis: min(calc(220px * var(--font-scale)), 38vh); }
 }

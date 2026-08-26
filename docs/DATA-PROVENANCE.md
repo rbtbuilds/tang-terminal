@@ -36,6 +36,12 @@ Congressional rows are normalized by CongressInvests from House and Senate publi
 
 Analyst recommendations are licensed, attributed research rather than public facts. Any future adapter must retain the source provider, named institution when supplied, rating/action, publication date, coverage count, target currency, freshness and entitlement level. Consensus labels such as `Strong Buy` must be presented as the provider's aggregation—not as advice from TANG or its local model. Missing or plan-restricted fields must never be inferred.
 
+## Earnings forecasts
+
+Live earnings dates, announcement timing, EPS estimates and revenue estimates come from the configured Finnhub calendar adapter. Finnhub describes these EPS/revenue figures as non-GAAP estimates sourced from sell-side and buy-side analysts. TANG requests the next 28 days, filters to tracked equities and watchlist symbols, caches responses for one hour, and leaves absent fields blank.
+
+The `BEAT-LEAN`, `MIXED`, and `MISS-LEAN` label is calculated locally from the sign of up to four available historical earnings surprises. A 67% threshold separates directional labels from mixed history. This tiny sample is not a statistical forecast, does not incorporate valuation, guidance, revisions, seasonality, options-implied moves or macro conditions, and must never be described as a probability of the next result. Demo calendar values are simulated and labelled accordingly.
+
 ## AIS semantics
 
 AISStream data is event-driven and has no uptime or delivery SLA. The browser receives only normalized position fields: MMSI, name, latitude, longitude, speed, course, class and observation time. Static ship classification may arrive after a position, so unknown targets remain explicitly unclassified. The configured stream covers selected energy corridors and should not be described as complete global satellite coverage.

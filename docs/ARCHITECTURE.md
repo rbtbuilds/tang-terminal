@@ -17,6 +17,7 @@ The browser owns presentation and device-local preferences. The local server own
 - `widgets/` contains isolated renderers. A widget exposes `create()` and may expose `update(quotes)` plus cleanup handles.
 - `details.js` owns on-demand chart, technical, scenario, provenance and news rendering.
 - `intelligence.js` owns the single cached browser request for overview news and disclosure widgets.
+- `earnings.js` owns demo/live earnings loading for the tracked equity and watchlist universe.
 - `ollama.js` owns the local-model request contract and evidence-constrained system prompt.
 
 ## Layout lifecycle
@@ -45,6 +46,7 @@ The watchlist rail, command field and collapsible local-AI dock remain available
 - `/api/search` — provider-supported security discovery.
 - `/api/instrument` — OHLCV, provenance and recent headline metadata.
 - `/api/intelligence` — cached, normalized news, SEC Form 4 and Congressional disclosure briefing.
+- `/api/earnings` — optional Finnhub calendar, consensus estimates and recent-surprise context; credentials remain server-side.
 - `/api/ais/positions` — bounded, key-free browser snapshot of recent AIS positions.
 - `/api/ollama/*` — local Ollama proxy.
 

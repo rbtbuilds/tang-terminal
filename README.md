@@ -21,6 +21,7 @@ TANG Terminal—**Trading Analytics & Navigation Grid**—is an open-source, ter
 - Local AI assistant backed by an Ollama model of your choice
 - Persistent collapsible AI dock shared by every workspace
 - Overview briefing with recent news, quote-derived movers, educational setups, and public disclosures
+- Upcoming earnings radar with analyst EPS/revenue consensus and a recent-surprise-history lean
 - Click-through instrument research with seven chart ranges, calculated technicals, educational bull/bear scenarios, and recent headlines
 - Persistent watchlist panel; pin or unpin an instrument from its research drawer
 - Global security search for provider-supported LSE, NYSE, Nasdaq and other exchange-listed instruments
@@ -83,6 +84,16 @@ The real configuration file is ignored by Git. If it is included in a private re
 
 TANG subscribes to six major energy-shipping corridors rather than the entire global firehose. AIS reception is terrestrial and event-driven; coverage, classification and update frequency vary. Targets expire from the display after 30 minutes. Unclassified targets are shown in blue; confirmed tanker-class AIS types are amber.
 
+## Live earnings calendar
+
+Demo mode includes a clearly simulated earnings board. Live upcoming earnings use an optional Finnhub key:
+
+1. Create a free key at [Finnhub](https://finnhub.io/register).
+2. Add `TANG_FINNHUB_API_KEY=your_key` to the ignored `terminal/.tang-terminal.env` file.
+3. Restart TANG Terminal and select **LIVE** mode.
+
+The widget covers tracked equities and watchlist symbols found in the provider calendar over the next 28 days. EPS and revenue are non-GAAP analyst consensus estimates. `BEAT-LEAN`, `MIXED`, and `MISS-LEAN` use only the last four available surprise outcomes; they are deliberately weak historical heuristics, not model certainty, analyst advice, or a substitute for guidance and fundamentals.
+
 ## Using the terminal
 
 - Select **EDIT LAYOUT** to reveal move, resize, and remove controls.
@@ -106,6 +117,8 @@ Layout and preferences are stored only in the browser's `localStorage`. Differen
 
 `LiveAdapter` requests public chart-market data from Yahoo Finance through the bundled local server once per minute. Dashboard quotes are retrieved in batches—rather than one upstream request per instrument—to keep startup and page switching responsive. Intraday percentage changes use the provider's previous close rather than the first bar in a multi-day range. Research views distinguish observation and retrieval times, currency, exchange, provider and documented delay. For example, Yahoo documents LSE data as 20 minutes delayed and many NYMEX/COMEX futures as 30 minutes delayed; TANG preserves those labels instead of describing the whole connection as real-time. Availability and symbol coverage depend on the upstream service; a failed request is shown as unavailable and does not break the dashboard. Market-cap values are illustrative reference values, not live quotes. Commodity panels use front-month exchange-traded futures proxies; tanker panels show listed operator equities rather than freight rates.
 
+The optional earnings adapter requests Finnhub's upcoming calendar once per hour and adds recent reported-surprise context for at most 12 tracked events. Missing credentials, estimates, history, or provider coverage remain visibly unavailable rather than being inferred.
+
 The technical signal is calculated locally from the selected range using SMA20, SMA50, RSI14, ATR14, and recent support/resistance. Bull and bear scenarios are mechanical educational examples—not individualized recommendations or executable orders. News headlines are fetched on demand and link to the original publisher through Yahoo Finance search.
 
 The Overview disclosure board reads open-market purchase/sale codes from official SEC Form 4 filings. Congressional rows use CongressInvests as a normalizer but retain links to official disclosures; the widget exposes a stale-provider warning and notes the statutory reporting lag. These are filing monitors, not complete order-flow feeds.
@@ -126,6 +139,7 @@ terminal/
   js/data/                Instrument universe and data adapters
   js/widgets/             Isolated panel renderers
   js/intelligence.js      Shared cached briefing/disclosure client
+  js/earnings.js          Optional earnings calendar client and offline demo
   js/grid.js              Collision-free auto layout and pointer resizing
   js/ollama.js            Local model client
   js/main.js              Application orchestration

@@ -12,6 +12,7 @@ TANG Terminal is an open-source, local-first research toolkit for retail traders
 - A persistent watchlist, global symbol search, instrument drawer and collapsible local Ollama assistant.
 - Demo/offline and connected adapters with prominent provider, delay and stale-data semantics.
 - Overview news, loaded-universe movers, educational mechanical setups, SEC insider filings and Congressional disclosures.
+- Upcoming earnings with attributed analyst consensus and a transparent recent-surprise-history lean; live mode requires an optional server-side Finnhub key.
 - Local Natural Earth map and optional server-side AISStream vessel positions.
 - Per-workspace layouts with drag reorder, continuous height and 3–12-column width resizing, automatic natural height, and readable responsive minimums.
 
