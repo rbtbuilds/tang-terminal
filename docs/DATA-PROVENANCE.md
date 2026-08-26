@@ -38,7 +38,7 @@ Analyst recommendations are licensed, attributed research rather than public fac
 
 ## Earnings forecasts
 
-Live earnings dates, announcement timing, EPS estimates and revenue estimates come from the configured Finnhub calendar adapter. Finnhub describes these EPS/revenue figures as non-GAAP estimates sourced from sell-side and buy-side analysts. TANG requests the next 28 days, filters to tracked equities and watchlist symbols, caches responses for one hour, and leaves absent fields blank.
+Live earnings dates, announcement timing, EPS estimates and revenue estimates come from the configured Finnhub calendar adapter. Finnhub describes these EPS/revenue figures as non-GAAP estimates sourced from sell-side and buy-side analysts. TANG requests the next 28 days, filters to tracked equities and watchlist symbols, caches responses for one hour, and leaves absent fields blank. The free configuration uses the US calendar; international access is entitlement-dependent.
 
 The `BEAT-LEAN`, `MIXED`, and `MISS-LEAN` label is calculated locally from the sign of up to four available historical earnings surprises. A 67% threshold separates directional labels from mixed history. This tiny sample is not a statistical forecast, does not incorporate valuation, guidance, revisions, seasonality, options-implied moves or macro conditions, and must never be described as a probability of the next result. Demo calendar values are simulated and labelled accordingly.
 

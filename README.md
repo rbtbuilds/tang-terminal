@@ -89,10 +89,10 @@ TANG subscribes to six major energy-shipping corridors rather than the entire gl
 Demo mode includes a clearly simulated earnings board. Live upcoming earnings use an optional Finnhub key:
 
 1. Create a free key at [Finnhub](https://finnhub.io/register).
-2. Add `TANG_FINNHUB_API_KEY=your_key` to the ignored `terminal/.tang-terminal.env` file.
+2. Add `TANG_FINNHUB_API_KEY=your_key` to the ignored `terminal/.tang-terminal.env` file. A dedicated ignored `.tang-finnhub.env` is also supported.
 3. Restart TANG Terminal and select **LIVE** mode.
 
-The widget covers tracked equities and watchlist symbols found in the provider calendar over the next 28 days. EPS and revenue are non-GAAP analyst consensus estimates. `BEAT-LEAN`, `MIXED`, and `MISS-LEAN` use only the last four available surprise outcomes; they are deliberately weak historical heuristics, not model certainty, analyst advice, or a substitute for guidance and fundamentals.
+The free adapter covers US-listed tracked equities and watchlist symbols found in the provider calendar over the next 28 days; international calendar access depends on Finnhub entitlement. EPS and revenue are non-GAAP analyst consensus estimates. `BEAT-LEAN`, `MIXED`, and `MISS-LEAN` use only the last four available surprise outcomes; they are deliberately weak historical heuristics, not model certainty, analyst advice, or a substitute for guidance and fundamentals.
 
 ## Using the terminal
 

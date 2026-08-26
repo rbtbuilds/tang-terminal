@@ -26,6 +26,30 @@ TANG aims to be an open-source research workbench, not a signal-selling product.
 - **Alpha Vantage** documents fundamentals, earnings, news sentiment, gainers/losers, insiders and calendars. Real-time or delayed mover entitlements may require a paid plan.
 - **SEC EDGAR** provides keyless official submissions and XBRL facts updated throughout the day. It is preferred for US filing evidence but does not provide bank ratings.
 
+## Finnhub capability map
+
+The following endpoints were exercised against the project's free test entitlement on 2026-08-26. Entitlements can change; adapters must still detect `401`, `403`, and `429` responses and expose an unavailable state.
+
+| Dataset | Current access | Best TANG surface |
+| --- | --- | --- |
+| Recommendation trends | available | Instrument drawer: dated strong-buy/buy/hold/sell counts |
+| Basic financials | available | Instrument drawer: valuation, margins, growth, 52-week range |
+| Company news | available | Instrument drawer and watchlist-specific news |
+| General market news | available | Overview briefing fallback or provider selector |
+| IPO calendar | available | Research or Markets calendar widget |
+| Insider transactions | available | Broader-market supplement to official SEC Form 4 parsing |
+| Insider sentiment | available | Instrument drawer with methodology and monthly period |
+| Company peers | available | Comparable-company research panel |
+| Earnings calendar and four-quarter surprises | available for US calendar | Overview Earnings Radar |
+| International earnings calendar | not enabled | Show entitlement notice; never silently omit scope |
+| Consensus price targets | not enabled | Premium adapter only |
+| Named upgrades/downgrades | not enabled | Premium adapter only |
+| News sentiment | not enabled | Premium adapter only |
+| Economic calendar | not enabled | Use another attributed provider or upgraded entitlement |
+| Institutional ownership/portfolios | premium in documentation | Prefer SEC 13F for an open-data implementation |
+
+Recommended implementation order for the available feeds: recommendation trends and basic financials in the instrument drawer, peer comparison, watchlist-specific company news, then an IPO calendar. Existing official SEC insider data remains the primary US disclosure source.
+
 Keys belong only in ignored `.tang-terminal.env` entries and are consumed by the local server. The browser receives normalized results plus provenance, never credentials.
 
 ## Required UX rules

@@ -2,6 +2,12 @@
 
 All notable changes to TANG Terminal are recorded here.
 
+## 3.2.1 — 2026-08-26
+
+- Send Finnhub credentials in the authentication header so keys never enter upstream URLs or request logs.
+- Match the live earnings request to the configured US-calendar entitlement and document international limits.
+- Add a tested capability map for future Finnhub integrations.
+
 ## 3.2.0 — 2026-08-26
 
 - Added the Overview earnings radar with upcoming event timing and analyst EPS/revenue estimates.

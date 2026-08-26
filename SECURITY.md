@@ -13,7 +13,7 @@ Please allow maintainers reasonable time to validate and address a report before
 ## Security model
 
 - The local server binds to `127.0.0.1` and is not designed for public hosting.
-- Credentials belong only in `terminal/.tang-terminal.env`, which is ignored by Git.
+- Credentials belong only in ignored `terminal/.tang-*.env` local files.
 - Browser endpoints must never return credential values.
 - TANG does not store brokerage credentials or execute orders.
 - External news, market, filing, model, and AIS responses are untrusted input and must be normalized or escaped.

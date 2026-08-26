@@ -29,14 +29,15 @@ ROOT = pathlib.Path(__file__).resolve().parent
 
 def load_local_environment() -> None:
     """Load ignored local credentials without exposing them to the browser."""
-    path = ROOT / ".tang-terminal.env"
-    if not path.exists():
-        return
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line or line.lstrip().startswith("#") or "=" not in line:
+    for filename in (".tang-terminal.env", ".tang-finnhub.env"):
+        path = ROOT / filename
+        if not path.exists():
             continue
-        name, value = line.split("=", 1)
-        os.environ.setdefault(name.strip(), value.strip())
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line or line.lstrip().startswith("#") or "=" not in line:
+                continue
+            name, value = line.split("=", 1)
+            os.environ.setdefault(name.strip(), value.strip())
 
 
 load_local_environment()
@@ -566,8 +567,16 @@ def fetch_intelligence() -> dict:
 
 
 def fetch_finnhub_json(path: str, params: dict[str, str]) -> dict | list:
-    query = urllib.parse.urlencode({**params, "token": FINNHUB_KEY})
-    payload = json.loads(fetch_text(f"https://finnhub.io/api/v1/{path}?{query}"))
+    query = urllib.parse.urlencode(params)
+    request = urllib.request.Request(
+        f"https://finnhub.io/api/v1/{path}?{query}",
+        headers={
+            "User-Agent": "Mozilla/5.0 TANG-Terminal/3.2",
+            "X-Finnhub-Token": FINNHUB_KEY,
+        },
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        payload = json.loads(response.read().decode("utf-8", "replace"))
     if isinstance(payload, dict) and payload.get("error"):
         raise ValueError(str(payload["error"]))
     return payload
@@ -605,7 +614,7 @@ def fetch_earnings(symbols: list[str]) -> dict:
     start = datetime.now(timezone.utc).date()
     end = start + timedelta(days=28)
     calendar = fetch_finnhub_json("calendar/earnings", {
-        "from": start.isoformat(), "to": end.isoformat(), "international": "true",
+        "from": start.isoformat(), "to": end.isoformat(),
     })
     raw_events = calendar.get("earningsCalendar") if isinstance(calendar, dict) else []
     requested = set(normalized)
@@ -648,7 +657,7 @@ def fetch_earnings(symbols: list[str]) -> dict:
 
 
 class Handler(SimpleHTTPRequestHandler):
-    server_version = "TangTerminal/3.2.0"
+    server_version = "TangTerminal/3.2.1"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
