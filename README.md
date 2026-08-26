@@ -3,6 +3,7 @@
 ### Trading Analytics & Navigation Grid
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-34f57a.svg)](LICENSE)
+[![Checks](https://github.com/rbtbuilds/tang-terminal/actions/workflows/checks.yml/badge.svg)](https://github.com/rbtbuilds/tang-terminal/actions/workflows/checks.yml)
 [![No build step](https://img.shields.io/badge/build-none-34f57a.svg)](#quick-start)
 [![Local first](https://img.shields.io/badge/data-local--first-34f57a.svg)](#reliability-and-privacy)
 
