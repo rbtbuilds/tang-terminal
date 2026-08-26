@@ -58,6 +58,7 @@
   var DEFAULT_SETTINGS = {
     dataMode: "demo",                 // "demo" | "live"
     chartProvider: "yahoo",           // "yahoo" | "twelve"
+    chartStyle: "candles",            // "line" | "candles"
     fontScale: 1,
     aiDockOpen: true,
     ollama: {

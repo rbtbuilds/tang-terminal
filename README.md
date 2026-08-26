@@ -22,7 +22,7 @@ TANG Terminal—**Trading Analytics & Navigation Grid**—is an open-source, ter
 - Persistent collapsible AI dock shared by every workspace
 - Overview briefing with recent news, quote-derived movers, educational setups, and public disclosures
 - Upcoming earnings radar with analyst EPS/revenue consensus and a recent-surprise-history lean
-- Click-through instrument research with switchable OHLC candles, seven ranges, past returns, upcoming earnings, reported surprises, analyst-count consensus, fundamentals, peers, technicals, educational scenarios, and recent headlines
+- Click-through instrument research with persistent line/candlestick styles, switchable data feeds, seven ranges, past returns, upcoming earnings, reported surprises, analyst-count consensus, fundamentals, peers, technicals, educational scenarios, and recent headlines
 - Persistent watchlist panel; pin or unpin an instrument from its research drawer
 - Global security search for provider-supported LSE, NYSE, Nasdaq and other exchange-listed instruments
 - Five routed workspaces: Overview, Markets, Energy & Commodities, Shipping Map, and Research
@@ -117,7 +117,7 @@ The Basic plan currently permits 8 API credits per minute and 800 per day. TANG 
 - Select **FULLSCREEN** to enter a borderless browser canvas. Move the browser window to the desired display first, then enter fullscreen. Browser security requires this user gesture.
 - Open an instrument and select **+ WATCHLIST** to pin it to the persistent watchlist panel. Select **★ WATCHING** or the row's × button to remove it.
 - Select **+ TICKER**, search by company or provider ticker, confirm the exchange, and add the result. London listings normally use the `.L` suffix (for example `BP.L`). Custom instruments persist locally and receive the same chart, technical and news drawer.
-- In an expanded ticker, switch between **YAHOO · GLOBAL** and the optional **TWELVE DATA · FREE LIVE** candle feed. The selection persists locally. Twelve Data refreshes once per minute while the drawer remains open.
+- In an expanded ticker, choose **LINE** or **CANDLES** independently from **YAHOO · GLOBAL** or **TWELVE DATA · FREE LIVE**. Both choices persist locally. Twelve Data refreshes once per minute while the drawer remains open.
 - Switch among **OVERVIEW**, **MARKETS**, **ENERGY & COMMODITIES**, **SHIPPING MAP**, and **RESEARCH**. Each has an independent persistent layout and URL hash.
 - Select **+ WIDGET** to add panels to the current workspace. Use a panel's × control to remove it without deleting its data.
 - Use **A−** and **A+** to scale terminal typography between 85% and 145%.

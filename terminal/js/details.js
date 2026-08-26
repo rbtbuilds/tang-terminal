@@ -8,6 +8,7 @@
   var currentSymbol = ""; var currentRange = "3mo"; var lastPayload = null;
   var refreshTimer = null; var requestNumber = 0;
   var settings = TT.store.getSettings(); var currentProvider = settings.chartProvider || "yahoo";
+  var currentChartStyle = settings.chartStyle === "line" ? "line" : "candles";
   var ranges = [
     { value: "1d", label: "1D" }, { value: "5d", label: "5D" },
     { value: "1mo", label: "1M" }, { value: "3mo", label: "3M" },
@@ -117,7 +118,8 @@
     var technical = calculate(payload); var digits = instrument.digits || 2; var change = payload.previousClose ? ((technical.last - payload.previousClose) / payload.previousClose) * 100 : null;
     var delayLabel = payload.delayMinutes == null ? "DELAY UNKNOWN" : Number(payload.delayMinutes) > 0 ? payload.delayMinutes + " MIN DELAY" : "REAL-TIME INDICATED";
     var rangeButtons = ranges.map(function (item) { return '<button class="range-btn ' + (item.value === currentRange ? "active" : "") + '" data-range="' + item.value + '">' + item.label + '</button>'; }).join("");
-    var feedButtons = '<div class="feed-switch" aria-label="Candle data provider"><span>CANDLES</span><button class="range-btn provider-btn ' + (currentProvider === "yahoo" ? "active" : "") + '" data-provider="yahoo">YAHOO · GLOBAL</button><button class="range-btn provider-btn ' + (currentProvider === "twelve" ? "active" : "") + '" data-provider="twelve">TWELVE DATA · FREE LIVE</button></div>';
+    var feedButtons = '<div class="chart-controls"><div class="feed-switch" aria-label="Chart data provider"><span>FEED</span><button class="range-btn provider-btn ' + (currentProvider === "yahoo" ? "active" : "") + '" data-provider="yahoo">YAHOO · GLOBAL</button><button class="range-btn provider-btn ' + (currentProvider === "twelve" ? "active" : "") + '" data-provider="twelve">TWELVE DATA · FREE LIVE</button></div>' +
+      '<div class="view-switch" aria-label="Chart style"><span>CHART</span><button class="range-btn chart-style-btn ' + (currentChartStyle === "line" ? "active" : "") + '" data-chart-style="line">LINE</button><button class="range-btn chart-style-btn ' + (currentChartStyle === "candles" ? "active" : "") + '" data-chart-style="candles">CANDLES</button></div></div>';
     var news = payload.news && payload.news.length ? payload.news.map(function (item) { return '<a class="news-item" href="' + escapeHTML(item.link) + '" target="_blank" rel="noopener noreferrer"><span class="news-title">' + escapeHTML(item.title) + '</span><span class="news-meta">' + escapeHTML(item.publisher) + ' · ' + escapeHTML(formatTime(item.published)) + ' ↗</span></a>'; }).join("") : '<div class="detail-empty">No recent headlines returned for this instrument.</div>';
     var signalClass = technical.bias.indexOf("BULL") === 0 ? "up" : technical.bias.indexOf("BEAR") === 0 ? "down" : "amber";
     title.textContent = instrument.sym + " · " + instrument.name;
@@ -125,7 +127,7 @@
       '<div class="detail-summary"><div><span class="detail-price">' + price(technical.last, digits) + '</span> <span class="' + (change == null ? "faint" : TT.widgets.valueClass(change)) + '">' + (change == null ? "" : signed(change, "%")) + '</span><button id="watchlist-toggle" class="watchlist-toggle ' + (TT.watchlist.contains(currentSymbol) ? "active" : "") + '">' + (TT.watchlist.contains(currentSymbol) ? "★ WATCHING" : "+ WATCHLIST") + '</button></div>' +
       '<div class="detail-provenance">' + escapeHTML(payload.provider || "LOCAL") + ' · ' + escapeHTML(payload.exchange || "") + ' · ' + escapeHTML(payload.currency || "") + '<br>OBSERVED ' + escapeHTML(formatTime(payload.marketTime)) + ' · RETRIEVED ' + escapeHTML(formatTime(payload.retrievedAt)) + '<br><span>' + escapeHTML(delayLabel) + ' · VERIFY BEFORE TRADING</span></div></div>' +
       feedButtons + '<div class="range-bar" aria-label="Chart range">' + rangeButtons + '</div>' + (payload.coverageNote ? '<p class="feed-notice">' + escapeHTML(payload.coverageNote) + ' Auto-refresh: ' + escapeHTML(payload.refreshSeconds || 60) + 's while open.</p>' : '') +
-      '<section class="chart-card"><canvas id="price-chart" aria-label="' + escapeHTML(instrument.name) + ' candlestick chart"></canvas><div class="chart-legend"><span>▮ OHLC CANDLES</span><span class="amber">— SMA20</span><span>' + payload.points.length + ' BARS · ' + escapeHTML(String(payload.interval || "").toUpperCase()) + '</span></div></section>' +
+      '<section class="chart-card"><canvas id="price-chart" aria-label="' + escapeHTML(instrument.name) + ' ' + escapeHTML(currentChartStyle) + ' chart"></canvas><div class="chart-legend"><span class="chart-style-legend">' + (currentChartStyle === "line" ? "— CLOSE LINE" : "▮ OHLC CANDLES") + '</span><span class="amber">— SMA20</span><span>' + payload.points.length + ' BARS · ' + escapeHTML(String(payload.interval || "").toUpperCase()) + '</span></div></section>' +
       '<div class="research-grid research-grid-wide">' + performanceCard(research) + earningsCard(research) + recommendationCard(research) + fundamentalsCard(research) + '</div>' +
       '<div class="research-grid"><section class="research-card"><h3>TECHNICALS · SELECTED RANGE</h3><div class="metric-grid">' +
       metric("SMA 20", price(technical.sma20, digits), technical.sma20 && technical.last >= technical.sma20 ? "up" : "down") + metric("SMA 50", price(technical.sma50, digits), technical.sma50 && technical.last >= technical.sma50 ? "up" : "down") + metric("RSI 14", technical.rsi == null ? "—" : technical.rsi.toFixed(1), technical.rsi > 70 ? "down" : technical.rsi < 30 ? "up" : "flat") + metric("ATR 14", price(technical.atr, digits)) + metric("SUPPORT", price(technical.support, digits)) + metric("RESISTANCE", price(technical.resistance, digits)) + metric("PERIOD LOW", price(technical.periodLow, digits)) + metric("PERIOD HIGH", price(technical.periodHigh, digits)) +
@@ -138,6 +140,7 @@
   function bindControls() {
     content.querySelectorAll(".range-btn[data-range]").forEach(function (button) { button.addEventListener("click", function () { currentRange = button.dataset.range; load(); }); });
     content.querySelectorAll(".provider-btn").forEach(function (button) { button.addEventListener("click", function () { setProvider(button.dataset.provider); }); });
+    content.querySelectorAll(".chart-style-btn").forEach(function (button) { button.addEventListener("click", function () { setChartStyle(button.dataset.chartStyle); }); });
     content.querySelector("#watchlist-toggle").addEventListener("click", function (event) { var watching = TT.watchlist.toggle(currentSymbol); event.target.classList.toggle("active", watching); event.target.textContent = watching ? "★ WATCHING" : "+ WATCHLIST"; });
     content.querySelectorAll(".peer-btn").forEach(function (button) { button.addEventListener("click", function () { var symbol = button.dataset.peer; TT.symbols.register({ symbol: symbol, name: symbol, live: symbol, type: "Equity" }); open(symbol); }); });
   }
@@ -147,12 +150,18 @@
     var ratio = window.devicePixelRatio || 1; var rect = canvas.getBoundingClientRect(); canvas.width = Math.max(320, rect.width) * ratio; canvas.height = Math.max(220, rect.height) * ratio;
     var context = canvas.getContext("2d"); context.scale(ratio, ratio); var width = canvas.width / ratio; var height = canvas.height / ratio; var pad = { top: 14, right: 58, bottom: 26, left: 10 };
     var highs = points.map(function (point) { return Number(point.h == null ? point.c : point.h); }); var lows = points.map(function (point) { return Number(point.l == null ? point.c : point.l); }); var closes = points.map(function (point) { return Number(point.c); });
-    var rolling = closes.map(function (_, index) { return index < 19 ? null : mean(closes.slice(index - 19, index + 1)); }); var min = Math.min.apply(Math, lows); var max = Math.max.apply(Math, highs); var spread = max - min || max * 0.01 || 1; min -= spread * 0.08; max += spread * 0.08;
+    var rolling = closes.map(function (_, index) { return index < 19 ? null : mean(closes.slice(index - 19, index + 1)); });
+    var scaleValues = currentChartStyle === "line" ? closes.concat(rolling.filter(function (value) { return value != null; })) : highs.concat(lows);
+    var min = Math.min.apply(Math, scaleValues); var max = Math.max.apply(Math, scaleValues); var spread = max - min || max * 0.01 || 1; min -= spread * 0.08; max += spread * 0.08;
     function x(index) { return pad.left + (index + 0.5) * (width - pad.left - pad.right) / points.length; } function y(value) { return pad.top + (max - value) * (height - pad.top - pad.bottom) / (max - min); }
     context.strokeStyle = "#1d3a26"; context.fillStyle = "#5f9b72"; context.font = "10px monospace"; context.textAlign = "right";
     for (var grid = 0; grid < 5; grid += 1) { var gy = pad.top + grid * (height - pad.top - pad.bottom) / 4; context.beginPath(); context.moveTo(pad.left, gy); context.lineTo(width - pad.right, gy); context.stroke(); context.fillText((max - grid * (max - min) / 4).toFixed(2), width - 4, gy + 3); }
-    var candleWidth = Math.max(1, Math.min(8, (width - pad.left - pad.right) / points.length * 0.68));
-    points.forEach(function (point, index) { var open = Number(point.o == null ? point.c : point.o); var close = Number(point.c); var high = Number(point.h == null ? close : point.h); var low = Number(point.l == null ? close : point.l); var color = close >= open ? "#34f57a" : "#ff4d57"; context.strokeStyle = color; context.fillStyle = color; context.lineWidth = 1; context.beginPath(); context.moveTo(x(index), y(high)); context.lineTo(x(index), y(low)); context.stroke(); var top = Math.min(y(open), y(close)); var body = Math.max(1, Math.abs(y(open) - y(close))); context.fillRect(x(index) - candleWidth / 2, top, candleWidth, body); });
+    if (currentChartStyle === "candles") {
+      var candleWidth = Math.max(1, Math.min(8, (width - pad.left - pad.right) / points.length * 0.68));
+      points.forEach(function (point, index) { var open = Number(point.o == null ? point.c : point.o); var close = Number(point.c); var high = Number(point.h == null ? close : point.h); var low = Number(point.l == null ? close : point.l); var color = close >= open ? "#34f57a" : "#ff4d57"; context.strokeStyle = color; context.fillStyle = color; context.lineWidth = 1; context.beginPath(); context.moveTo(x(index), y(high)); context.lineTo(x(index), y(low)); context.stroke(); var top = Math.min(y(open), y(close)); var body = Math.max(1, Math.abs(y(open) - y(close))); context.fillRect(x(index) - candleWidth / 2, top, candleWidth, body); });
+    } else {
+      context.beginPath(); closes.forEach(function (value, index) { if (!index) context.moveTo(x(index), y(value)); else context.lineTo(x(index), y(value)); }); context.strokeStyle = "#34f57a"; context.lineWidth = 1.8; context.stroke();
+    }
     context.beginPath(); var started = false; rolling.forEach(function (value, index) { if (value == null) return; if (!started) { context.moveTo(x(index), y(value)); started = true; } else context.lineTo(x(index), y(value)); }); context.strokeStyle = "#ffb000"; context.lineWidth = 1; context.stroke();
     context.fillStyle = "#5f9b72"; context.textAlign = "left"; context.fillText(new Date(points[0].t * 1000).toLocaleDateString(), pad.left, height - 6); context.textAlign = "right"; context.fillText(new Date(points[points.length - 1].t * 1000).toLocaleDateString(), width - pad.right, height - 6);
   }
@@ -168,6 +177,14 @@
     currentProvider = provider;
     settings = TT.store.updateSettings({ chartProvider: provider });
     load();
+  }
+  function setChartStyle(style) {
+    currentChartStyle = style === "line" ? "line" : "candles";
+    settings = TT.store.updateSettings({ chartStyle: currentChartStyle });
+    content.querySelectorAll(".chart-style-btn").forEach(function (button) { button.classList.toggle("active", button.dataset.chartStyle === currentChartStyle); });
+    var legend = content.querySelector(".chart-style-legend"); if (legend) legend.textContent = currentChartStyle === "line" ? "— CLOSE LINE" : "▮ OHLC CANDLES";
+    var canvas = document.getElementById("price-chart"); if (canvas) canvas.setAttribute("aria-label", currentSymbol + " " + currentChartStyle + " chart");
+    if (lastPayload) drawChart(lastPayload.points);
   }
   function scheduleRefresh(payload) { window.clearTimeout(refreshTimer); if (currentProvider === "twelve" && payload.refreshSeconds && !overlay.hidden) refreshTimer = window.setTimeout(function () { load(true); }, Number(payload.refreshSeconds) * 1000); }
   function showError(error) {

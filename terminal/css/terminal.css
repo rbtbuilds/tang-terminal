@@ -666,8 +666,9 @@ table.quote-table tr:focus-visible td:first-child strong { color: var(--accent);
 .detail-provenance { text-align: right; color: var(--fg-dim); font-size: var(--fs-xs); line-height: 1.5; }
 .detail-provenance span { color: var(--amber); }
 .range-bar { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
-.feed-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-bottom: 7px; }
-.feed-switch > span { color: var(--fg-faint); font-size: var(--fs-xs); letter-spacing: 1px; margin-right: 3px; }
+.chart-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px; margin-bottom: 7px; }
+.feed-switch, .view-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.feed-switch > span, .view-switch > span { color: var(--fg-faint); font-size: var(--fs-xs); letter-spacing: 1px; margin-right: 3px; }
 .feed-notice { margin: 0 0 8px; padding: 7px 9px; border: 1px solid #59480f; background: #171405; color: var(--amber); font-size: var(--fs-xs); line-height: 1.45; }
 .chart-card, .research-card {
   border: 1px solid var(--border);

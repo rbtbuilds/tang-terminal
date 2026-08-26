@@ -901,7 +901,7 @@ def fetch_instrument_research(symbol: str) -> dict:
 
 
 class Handler(SimpleHTTPRequestHandler):
-    server_version = "TangTerminal/3.3.0"
+    server_version = "TangTerminal/3.3.1"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)

@@ -2,6 +2,11 @@
 
 All notable changes to TANG Terminal are recorded here.
 
+## 3.3.1 — 2026-08-26
+
+- Added an independent, persistent `LINE` / `CANDLES` chart-style switch without changing the selected Yahoo or Twelve Data feed.
+- Restored the close-price line view with the same SMA20 overlay, ranges, provenance, and live refresh behavior as candlesticks.
+
 ## 3.3.0 — 2026-08-26
 
 - Added a switchable Twelve Data Basic candle adapter for free real-time US equities/ETFs, forex and crypto, with one-minute refresh, 55-second cache and explicit free-tier limits.
